@@ -6,7 +6,7 @@ from typing import List, Dict, Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from googletrans import Translator
-from nutriflow.db.supabase import insert_meal, insert_meal_item
+from nutriflow.db.supabase import insert_meal, insert_meal_item, insert_activity
 from datetime import date
 
 
@@ -162,6 +162,17 @@ def exercise(data: ExerciseQuery):
             text_fr=data.query, weight_kg=data.weight_kg,
             height_cm=data.height_cm, age=data.age, gender=data.gender
         )
+        # ===== Sauvegarde des activités dans Supabase =====
+        user_id = "test-user-123"
+        for ex in exercises_raw:
+            insert_activity(
+                user_id=user_id,
+                date=str(date.today()),
+                description=ex.get("name", ""),
+                duree_min=ex.get("duration_min", 0),
+                calories_brulees=ex.get("nf_calories", 0)
+            )
+        # ===== Fin sauvegarde =====
         results = [ExerciseResult(
             name=ex.get("name",""), duration_min=ex.get("duration_min",0), calories=ex.get("nf_calories",0), met=ex.get("met")
         ) for ex in exercises_raw]
