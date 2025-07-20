@@ -3,5 +3,5 @@ uvicorn[standard]
 python-dotenv
 requests
 pandas
-googletrans==4.0.0-rc1
-httpx==0.23.3
+googletrans
+httpx
