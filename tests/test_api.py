@@ -1,7 +1,16 @@
+import os
+import sys
+from pathlib import Path
 import pytest
 import pandas as pd
 import asyncio
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
+
+os.environ.setdefault("SUPABASE_URL", "http://localhost")
+os.environ.setdefault("SUPABASE_KEY", "test-key")
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+
 from main import app
 from nutriflow.api import router
 from nutriflow.api.router import (
@@ -51,6 +60,15 @@ def mock_router(monkeypatch):
     monkeypatch.setattr(router, 'analyze_exercise_nutritionix', lambda **kwargs: SAMPLE_EXERCISES)
     monkeypatch.setattr(router, 'calculer_bmr', lambda p, t, a, s: 1500.0)
     monkeypatch.setattr(router, 'calculer_tdee', lambda p, t, a, s, cs: 1800.0)
+
+    # Mock Supabase insertion functions
+    monkeypatch.setattr(router, 'insert_meal', lambda *args, **kwargs: 'fake-meal-id')
+    monkeypatch.setattr(router, 'insert_meal_item', lambda *args, **kwargs: 'fake-meal-item-id')
+
+    import nutriflow.db.supabase as db
+    monkeypatch.setattr(db, 'insert_meal', lambda *args, **kwargs: 'fake-meal-id')
+    monkeypatch.setattr(db, 'insert_meal_item', lambda *args, **kwargs: 'fake-meal-item-id')
+    monkeypatch.setattr(db, 'insert_activity', lambda *args, **kwargs: 'fake-activity-id')
 
 # ----- Unit Tests -----
 
@@ -109,7 +127,8 @@ def run_async(coro):
 
 def test_exercise_integration_structure():
     async def inner():
-        async with AsyncClient(app=app, base_url="http://test") as ac:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
             res = await ac.post("/api/exercise", json={
                 "query": "30 minutes running",
                 "weight_kg": 70,
@@ -129,7 +148,8 @@ def test_exercise_integration_structure():
 
 def test_ingredients_integration_structure():
     async def inner():
-        async with AsyncClient(app=app, base_url="http://test") as ac:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
             res = await ac.post("/api/ingredients", json={"query": "50g flocons d'avoine"})
             assert res.status_code == 200
             data = res.json()
@@ -140,7 +160,8 @@ def test_ingredients_integration_structure():
 
 def test_barcode_integration_structure():
     async def inner():
-        async with AsyncClient(app=app, base_url="http://test") as ac:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
             res = await ac.post("/api/barcode", json={"barcode": "3274080005003"})
             assert res.status_code in (200, 404)
             if res.status_code == 200:
@@ -151,7 +172,8 @@ def test_barcode_integration_structure():
 
 def test_search_integration_structure():
     async def inner():
-        async with AsyncClient(app=app, base_url="http://test") as ac:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
             res = await ac.get("/api/search", params={"query": "yaourt"})
             assert res.status_code in (200, 404)
             if res.status_code == 200:
