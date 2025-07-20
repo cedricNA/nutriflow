@@ -6,6 +6,9 @@ from typing import List, Dict, Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from googletrans import Translator
+from nutriflow.db.supabase import insert_meal, insert_meal_item
+from datetime import date
+
 
 from nutriflow.services import (
     analyze_ingredients_nutritionix,
@@ -104,7 +107,28 @@ def ingredients(data: IngredientQuery):
             aliment=row["Aliment"], quantite=row["Quantite"], poids_g=row["Poids_g"],
             calories=row["Calories"], proteines_g=row["Proteines_g"], glucides_g=row["Glucides_g"], lipides_g=row["Lipides_g"],
         ) for _, row in df.iterrows()]
+
+        # === AJOUT SAUVEGARDE DANS SUPABASE ===
+        user_id = "test-user-123"  # temporairement en dur, à remplacer par l'id réel de l'utilisateur connecté
+        meal_id = insert_meal(user_id, str(date.today()), "repas", note="")
+        for food in foods:
+            insert_meal_item(
+                meal_id=meal_id,
+                nom_aliment=food.aliment,
+                marque=None,
+                quantite=food.poids_g,
+                unite="g",
+                calories=food.calories,
+                proteines_g=food.proteines_g,
+                glucides_g=food.glucides_g,
+                lipides_g=food.lipides_g,
+                barcode=None
+            )
+        # === FIN SAUVEGARDE ===
+
         return NutritionixResponse(foods=foods, totals=Totals(**totals_dict))
+
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
