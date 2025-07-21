@@ -178,3 +178,27 @@ def update_daily_summary(
     if not response.data:
         raise Exception("Erreur update daily_summary")
     return response.data[0]
+
+
+def get_user(user_id):
+    supabase = get_supabase_client()
+    response = (
+        supabase.table("users")
+        .select("*")
+        .eq("id", user_id)
+        .execute()
+    )
+    return response.data[0] if response.data else None
+
+
+def update_user(user_id, data):
+    supabase = get_supabase_client()
+    response = (
+        supabase.table("users")
+        .update(data)
+        .eq("id", user_id)
+        .execute()
+    )
+    if not response.data:
+        raise Exception("Erreur update user")
+    return response.data[0]
