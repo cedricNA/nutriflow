@@ -2,6 +2,8 @@ import os
 import requests
 import pandas as pd
 import unicodedata
+import asyncio
+import inspect
 from typing import List, Dict, Optional
 from fastapi import HTTPException
 from googletrans import Translator
@@ -85,8 +87,13 @@ def translate_fr_en(text_fr: str) -> str:
     cleaned = clean_text(text_fr)
     translator = Translator()
     try:
-        result = translator.translate(cleaned, src="fr", dest="en")
-        print(f"\N{CLOCKWISE OPEN CIRCLE ARROW} Traduction automatique : {cleaned} → {result.text}")
+        if inspect.iscoroutinefunction(translator.translate):
+            result = asyncio.run(translator.translate(cleaned, src="fr", dest="en"))
+        else:
+            result = translator.translate(cleaned, src="fr", dest="en")
+        print(
+            f"\N{CLOCKWISE OPEN CIRCLE ARROW} Traduction automatique : {cleaned} → {result.text}"
+        )
         return result.text
     except Exception as e:
         print(f"\N{CROSS MARK} Erreur traduction : {e}")
