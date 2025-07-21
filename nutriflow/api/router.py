@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from googletrans import Translator
 from nutriflow.db.supabase import insert_meal, insert_meal_item, insert_activity
+import nutriflow.db.supabase as db
 
 # ID utilisateur générique pour les tests/démo (doit être un UUID valide)
 TEST_USER_ID = "00000000-0000-0000-0000-000000000000"
@@ -95,6 +96,14 @@ class TDEResponse(BaseModel):
     bmr: float = Field(..., description="Métabolisme de base calculé (kcal)")
     calories_sport: float = Field(..., description="Calories brûlées via sport (kcal)")
     tdee: float = Field(..., description="Total Daily Energy Expenditure calculé (kcal)")
+
+class DailySummary(BaseModel):
+    date: str
+    total_calories: float
+    total_sport: float
+    tdee: float
+    balance: float
+    conseil: str
 
 # ----- Endpoints -----
 @router.post("/ingredients", response_model=NutritionixResponse)
@@ -207,3 +216,81 @@ def tdee(data: TDEEQuery):
         return TDEResponse(bmr=bmr_value, calories_sport=data.calories_sport, tdee=tdee_value)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/daily-summary", response_model=DailySummary)
+def daily_summary():
+    """Calcule et/ou retourne le résumé de la journée (bilan nutritionnel)."""
+    user_id = TEST_USER_ID
+    today = str(date.today())
+
+    # Vérifie si le résumé existe déjà
+    rec = db.get_daily_summary(user_id, today)
+    if rec:
+        return DailySummary(
+            date=rec["date"],
+            total_calories=rec["total_calories"],
+            total_sport=rec["total_sport"],
+            tdee=rec["tdee"],
+            balance=rec["balance"],
+            conseil=rec["conseil"],
+        )
+
+    # 1. Calcule les apports du jour
+    meals = db.get_meals(user_id, today)
+    meal_items = []
+    for meal in meals:
+        meal_items += db.get_meal_items(meal["id"])
+    total_calories = sum(item["calories"] for item in meal_items) if meal_items else 0.0
+
+    # 2. Calcule les calories sportives
+    activities = db.get_activities(user_id, today)
+    total_sport = sum(act["calories_brulees"] for act in activities) if activities else 0.0
+
+    # 3. Profil utilisateur (exemple simple ici)
+    user = {
+        "poids_kg": 75,
+        "taille_cm": 175,
+        "age": 30,
+        "sexe": "homme",
+        "objectif": "maintien",
+    }
+
+    # 4. Calcul TDEE
+    bmr = calculer_bmr(user["poids_kg"], user["taille_cm"], user["age"], user["sexe"])
+    tdee = calculer_tdee(user["poids_kg"], user["taille_cm"], user["age"], user["sexe"], total_sport)
+
+    # 5. Balance et conseil personnalisé
+    balance = total_calories - tdee
+    if user["objectif"] == "perte":
+        conseil = (
+            "Déficit souhaité pour perdre du poids" if balance < 0 else "Surplus, attention si vous souhaitez maigrir"
+        )
+    elif user["objectif"] == "prise":
+        conseil = (
+            "Surplus idéal pour prendre de la masse" if balance > 0 else "Pas assez de calories pour progresser"
+        )
+    else:
+        conseil = (
+            "Maintien calorique atteint" if abs(balance) < 100 else "Déséquilibre léger aujourd’hui"
+        )
+
+    # 6. Sauvegarde dans Supabase
+    db.insert_daily_summary(
+        user_id=user_id,
+        date=today,
+        total_calories=total_calories,
+        total_sport=total_sport,
+        tdee=tdee,
+        balance=balance,
+        conseil=conseil,
+    )
+
+    return DailySummary(
+        date=today,
+        total_calories=total_calories,
+        total_sport=total_sport,
+        tdee=tdee,
+        balance=balance,
+        conseil=conseil,
+    )
