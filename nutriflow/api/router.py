@@ -249,11 +249,11 @@ def daily_summary(date_str: str = Query(default=None, description="Date au forma
     if rec:
         return DailySummary(
             date=rec["date"],
-            calories_apportees=rec.get("calories_apportees", 0.0),
-            calories_brulees=rec.get("calories_brulees", 0.0),
-            tdee=rec.get("tdee", 0.0),
-            balance_calorique=rec.get("balance_calorique", 0.0),
-            conseil=rec.get("conseil", ""),
+            calories_apportees=rec.get("calories_apportees") or 0.0,
+            calories_brulees=rec.get("calories_brulees") or 0.0,
+            tdee=rec.get("tdee") or 0.0,
+            balance_calorique=rec.get("balance_calorique") or 0.0,
+            conseil=rec.get("conseil") or "",
         )
 
     # 1. Calcule les apports du jour
@@ -314,11 +314,11 @@ def daily_summary(date_str: str = Query(default=None, description="Date au forma
     db.insert_daily_summary(
         user_id=user_id,
         date=d,
-        tdee=tdee,
-        calories_apportees=calories_apportees,
-        calories_brulees=calories_brulees,
-        balance_calorique=balance_calorique,
-        conseil=conseil,
+        tdee=tdee or 0.0,
+        calories_apportees=calories_apportees or 0.0,
+        calories_brulees=calories_brulees or 0.0,
+        balance_calorique=balance_calorique or 0.0,
+        conseil=conseil or "",
     )
 
     return DailySummary(
