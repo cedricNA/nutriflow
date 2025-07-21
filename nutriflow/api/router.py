@@ -219,13 +219,14 @@ def tdee(data: TDEEQuery):
 
 
 @router.get("/daily-summary", response_model=DailySummary)
-def daily_summary():
-    """Calcule et/ou retourne le résumé de la journée (bilan nutritionnel)."""
+def daily_summary(date_str: str = Query(default=None, description="Date au format YYYY-MM-DD")):
+    """Calcule et/ou retourne le résumé de la journée (bilan nutritionnel) pour une date donnée."""
     user_id = TEST_USER_ID
     today = str(date.today())
+    d = date_str if date_str else today
 
     # Vérifie si le résumé existe déjà
-    rec = db.get_daily_summary(user_id, today)
+    rec = db.get_daily_summary(user_id, d)
     if rec:
         return DailySummary(
             date=rec["date"],
@@ -237,14 +238,14 @@ def daily_summary():
         )
 
     # 1. Calcule les apports du jour
-    meals = db.get_meals(user_id, today)
+    meals = db.get_meals(user_id, d)
     meal_items = []
     for meal in meals:
         meal_items += db.get_meal_items(meal["id"])
     total_calories = sum(item["calories"] for item in meal_items) if meal_items else 0.0
 
     # 2. Calcule les calories sportives
-    activities = db.get_activities(user_id, today)
+    activities = db.get_activities(user_id, d)
     total_sport = sum(act["calories_brulees"] for act in activities) if activities else 0.0
 
     # 3. Profil utilisateur (exemple simple ici)
@@ -278,7 +279,7 @@ def daily_summary():
     # 6. Sauvegarde dans Supabase
     db.insert_daily_summary(
         user_id=user_id,
-        date=today,
+        date=d,
         total_calories=total_calories,
         total_sport=total_sport,
         tdee=tdee,
@@ -287,7 +288,7 @@ def daily_summary():
     )
 
     return DailySummary(
-        date=today,
+        date=d,
         total_calories=total_calories,
         total_sport=total_sport,
         tdee=tdee,

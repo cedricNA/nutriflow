@@ -15,7 +15,8 @@ from main import app
 from nutriflow.api import router
 from nutriflow.api.router import (
     IngredientQuery, BarcodeQuery, ExerciseQuery, BMRQuery, TDEEQuery,
-    NutritionixResponse, OFFProduct, ExerciseResult, BMRResponse, TDEResponse
+    NutritionixResponse, OFFProduct, ExerciseResult, BMRResponse, TDEResponse,
+    DailySummary
 )
 
 # Sample data for mocking
@@ -70,6 +71,18 @@ def mock_router(monkeypatch):
     monkeypatch.setattr(db, 'insert_meal', lambda *args, **kwargs: 'fake-meal-id')
     monkeypatch.setattr(db, 'insert_meal_item', lambda *args, **kwargs: 'fake-meal-item-id')
     monkeypatch.setattr(db, 'insert_activity', lambda *args, **kwargs: 'fake-activity-id')
+    monkeypatch.setattr(db, 'get_daily_summary', lambda *args, **kwargs: {
+        "date": args[1] if len(args) > 1 else kwargs.get('date'),
+        "total_calories": 2000.0,
+        "total_sport": 300.0,
+        "tdee": 1800.0,
+        "balance": 200.0,
+        "conseil": "test"
+    })
+    monkeypatch.setattr(db, 'get_meals', lambda *args, **kwargs: [])
+    monkeypatch.setattr(db, 'get_meal_items', lambda *args, **kwargs: [])
+    monkeypatch.setattr(db, 'get_activities', lambda *args, **kwargs: [])
+    monkeypatch.setattr(db, 'insert_daily_summary', lambda *args, **kwargs: None)
 
 # ----- Unit Tests -----
 
@@ -119,6 +132,12 @@ def test_tdee_unit():
     assert resp.bmr == 1500.0
     assert resp.calories_sport == 200
     assert resp.tdee == 1800.0
+
+
+def test_daily_summary_unit():
+    resp = router.daily_summary(date_str="2023-01-02")
+    assert isinstance(resp, DailySummary)
+    assert resp.date == "2023-01-02"
 
 # ----- Integration Tests (structure only) -----
 
@@ -180,4 +199,15 @@ def test_search_integration_structure():
             if res.status_code == 200:
                 data = res.json()
                 assert "name" in data and "energy_kcal_per_100g" in data
+    run_async(inner())
+
+
+def test_daily_summary_integration_structure():
+    async def inner():
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            res = await ac.get("/api/daily-summary", params={"date_str": "2023-01-02"})
+            assert res.status_code == 200
+            data = res.json()
+            assert all(k in data for k in ("date", "total_calories", "total_sport", "tdee", "balance", "conseil"))
     run_async(inner())
