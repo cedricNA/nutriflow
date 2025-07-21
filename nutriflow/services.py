@@ -4,10 +4,68 @@ import pandas as pd
 import unicodedata
 from typing import List, Dict, Optional
 from fastapi import HTTPException
+from googletrans import Translator
 
 # Retrieve Nutritionix credentials from environment variables
 APP_ID = os.getenv("NUTRIFLOW_NUTRITIONIX_APP_ID")
 API_KEY = os.getenv("NUTRIFLOW_NUTRITIONIX_API_KEY")
+
+# Mapping manuel des activités sportives FR ➔ EN
+SPORTS_MAPPING: Dict[str, str] = {
+    "natation": "swimming",
+    "course": "running",
+    "marche": "walking",
+    "vélo": "cycling",
+    "cyclisme": "cycling",
+    "musculation": "weight lifting",
+    "fitness": "fitness",
+    "yoga": "yoga",
+    "boxe": "boxing",
+    "danse": "dancing",
+    "elliptique": "elliptical trainer",
+    "tapis de course": "treadmill",
+    "escalade": "climbing",
+    "ski": "skiing",
+    "snowboard": "snowboarding",
+    "basket": "basketball",
+    "basket-ball": "basketball",
+    "football": "soccer",
+    "foot": "soccer",
+    "tennis": "tennis",
+    "badminton": "badminton",
+    "ping pong": "table tennis",
+    "tennis de table": "table tennis",
+    "volley": "volleyball",
+    "volley-ball": "volleyball",
+    "rugby": "rugby",
+    "handball": "handball",
+    "crossfit": "crossfit",
+    "pilates": "pilates",
+    "step": "step aerobics",
+    "aviron": "rowing",
+    "rameur": "rowing",
+    "randonnée": "hiking",
+    "marathon": "marathon running",
+    "triathlon": "triathlon",
+    "trail": "trail running",
+    "boxe thai": "muay thai",
+    "judo": "judo",
+    "karaté": "karate",
+    "arts martiaux": "martial arts",
+    "plongée": "diving",
+    "rollers": "rollerblading",
+    "patinage": "ice skating",
+    "golf": "golf",
+    "escrime": "fencing",
+    "skate": "skateboarding",
+    "cross-training": "cross training",
+    "corde à sauter": "jump rope",
+    "jump rope": "jump rope",
+    "stretching": "stretching",
+    "surf": "surfing",
+    "cheval": "horse riding",
+    "équitation": "horse riding",
+}
 
 
 def clean_text(text: str) -> str:
@@ -25,6 +83,30 @@ def translate_fr_en(text_fr: str) -> str:
     la dépendance à un service externe lors des tests.
     """
     return clean_text(text_fr)
+
+
+def translate_activity_fr_en(text_fr: str) -> str:
+    """Traduit une activité sportive en anglais.
+
+    Utilise d'abord un mapping manuel puis Google Translate en secours.
+    """
+    texte = text_fr.lower()
+    mapping_hit = False
+    for fr, en in SPORTS_MAPPING.items():
+        if fr in texte:
+            texte = texte.replace(fr, en)
+            mapping_hit = True
+    if mapping_hit:
+        return clean_text(texte)
+
+    try:
+        translator = Translator()
+        translated = translator.translate(text_fr, src="fr", dest="en")
+        print(f"\N{CLOCKWISE OPEN CIRCLE ARROW} Fallback Google Translate : {translated.text}")
+        return clean_text(translated.text)
+    except Exception as e:
+        print(f"\N{CROSS MARK} Erreur traduction Google Translate : {e}")
+        return clean_text(text_fr)
 
 
 def get_off_search_nutrition(query: str) -> Optional[Dict]:
@@ -120,7 +202,8 @@ def analyze_exercise_nutritionix(
     """
     Analyse d'activité via Nutritionix Exercise API.
     """
-    query = translate_fr_en(text_fr)
+    query = translate_activity_fr_en(text_fr)
+    print(f"🔍 Texte final envoyé à Nutritionix : {query}")
     url = "https://trackapi.nutritionix.com/v2/natural/exercise"
     headers = {"x-app-id": APP_ID, "x-app-key": API_KEY, "Content-Type": "application/json"}
     body = {"query": query, "gender": gender, "weight_kg": weight_kg, "height_cm": height_cm, "age": age}
