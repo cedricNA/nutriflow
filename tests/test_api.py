@@ -79,6 +79,16 @@ def mock_router(monkeypatch):
         "balance": 200.0,
         "conseil": "test"
     })
+    monkeypatch.setattr(db, 'get_daily_summaries', lambda *args, **kwargs: [
+        {
+            "date": "2023-01-01",
+            "total_calories": 2000.0,
+            "total_sport": 300.0,
+            "tdee": 1800.0,
+            "balance": 200.0,
+            "conseil": "test"
+        }
+    ])
     monkeypatch.setattr(db, 'get_meals', lambda *args, **kwargs: [])
     monkeypatch.setattr(db, 'get_meal_items', lambda *args, **kwargs: [])
     monkeypatch.setattr(db, 'get_activities', lambda *args, **kwargs: [])
@@ -138,6 +148,12 @@ def test_daily_summary_unit():
     resp = router.daily_summary(date_str="2023-01-02")
     assert isinstance(resp, DailySummary)
     assert resp.date == "2023-01-02"
+
+
+def test_history_unit():
+    resp = router.get_history(limit=1)
+    assert isinstance(resp, list)
+    assert isinstance(resp[0], DailySummary)
 
 # ----- Integration Tests (structure only) -----
 
@@ -210,4 +226,17 @@ def test_daily_summary_integration_structure():
             assert res.status_code == 200
             data = res.json()
             assert all(k in data for k in ("date", "total_calories", "total_sport", "tdee", "balance", "conseil"))
+    run_async(inner())
+
+
+def test_history_integration_structure():
+    async def inner():
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            res = await ac.get("/api/history", params={"limit": 1})
+            assert res.status_code == 200
+            data = res.json()
+            assert isinstance(data, list) and data
+            first = data[0]
+            assert all(k in first for k in ("date", "total_calories", "total_sport", "tdee", "balance", "conseil"))
     run_async(inner())

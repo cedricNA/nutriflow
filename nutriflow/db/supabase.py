@@ -106,6 +106,20 @@ def get_daily_summary(user_id, date):
     return response.data[0] if response.data else None
 
 
+def get_daily_summaries(user_id, limit=30):
+    """Récupère les bilans journaliers les plus récents pour un utilisateur."""
+    supabase = get_supabase_client()
+    response = (
+        supabase.table("daily_summary")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("date", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return response.data or []
+
+
 def insert_daily_summary(
     user_id,
     date,
