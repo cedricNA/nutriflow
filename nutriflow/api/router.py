@@ -112,10 +112,10 @@ class TDEResponse(BaseModel):
 
 class DailySummary(BaseModel):
     date: str
-    total_calories: float
-    total_sport: float
+    calories_apportees: float
+    calories_brulees: float
     tdee: float
-    balance: float
+    balance_calorique: float
     conseil: str
 
 # ----- Endpoints -----
@@ -249,11 +249,11 @@ def daily_summary(date_str: str = Query(default=None, description="Date au forma
     if rec:
         return DailySummary(
             date=rec["date"],
-            total_calories=rec["total_calories"],
-            total_sport=rec["total_sport"],
-            tdee=rec["tdee"],
-            balance=rec["balance"],
-            conseil=rec["conseil"],
+            calories_apportees=rec.get("calories_apportees", 0.0),
+            calories_brulees=rec.get("calories_brulees", 0.0),
+            tdee=rec.get("tdee", 0.0),
+            balance_calorique=rec.get("balance_calorique", 0.0),
+            conseil=rec.get("conseil", ""),
         )
 
     # 1. Calcule les apports du jour
@@ -261,11 +261,11 @@ def daily_summary(date_str: str = Query(default=None, description="Date au forma
     meal_items = []
     for meal in meals:
         meal_items += db.get_meal_items(meal["id"])
-    total_calories = sum(item["calories"] for item in meal_items) if meal_items else 0.0
+    calories_apportees = sum(item["calories"] for item in meal_items) if meal_items else 0.0
 
     # 2. Calcule les calories sportives
     activities = db.get_activities(user_id, d)
-    total_sport = sum(act["calories_brulees"] for act in activities) if activities else 0.0
+    calories_brulees = sum(act["calories_brulees"] for act in activities) if activities else 0.0
 
     # 3. Profil utilisateur (exemple simple ici)
     user = {
@@ -278,34 +278,34 @@ def daily_summary(date_str: str = Query(default=None, description="Date au forma
 
     # 4. Calcul TDEE
     bmr = calculer_bmr(user["poids_kg"], user["taille_cm"], user["age"], user["sexe"])
-    tdee = calculer_tdee(user["poids_kg"], user["taille_cm"], user["age"], user["sexe"], total_sport)
+    tdee = calculer_tdee(user["poids_kg"], user["taille_cm"], user["age"], user["sexe"], calories_brulees)
 
     # 5. Balance et conseil personnalisé (mieux adapté selon l'objectif)
-    balance = total_calories - tdee
+    balance_calorique = calories_apportees - tdee
 
     objectif = user.get("objectif", "maintien")
     if objectif == "perte":
-        if balance < -300:
+        if balance_calorique < -300:
             conseil = "Déficit important, perte de poids rapide possible."
-        elif balance < 0:
+        elif balance_calorique < 0:
             conseil = "Déficit modéré, bonne trajectoire pour perdre du poids."
-        elif balance < 150:
+        elif balance_calorique < 150:
             conseil = "Attention, vous êtes en léger surplus."
         else:
             conseil = "Surplus, risque de prise de poids."
     elif objectif == "prise":
-        if balance > 300:
+        if balance_calorique > 300:
             conseil = "Surplus optimal pour prise de masse."
-        elif balance > 0:
+        elif balance_calorique > 0:
             conseil = "Surplus léger, progression possible mais lente."
-        elif balance > -150:
+        elif balance_calorique > -150:
             conseil = "Attention, vous êtes presque à l’équilibre."
         else:
             conseil = "Déficit, trop faible pour prise de masse."
     else:  # maintien
-        if abs(balance) < 150:
+        if abs(balance_calorique) < 150:
             conseil = "Maintien calorique atteint."
-        elif balance < 0:
+        elif balance_calorique < 0:
             conseil = "Léger déficit, surveillez si ce n’est pas souhaité."
         else:
             conseil = "Léger surplus, surveillez si ce n’est pas souhaité."
@@ -314,19 +314,19 @@ def daily_summary(date_str: str = Query(default=None, description="Date au forma
     db.insert_daily_summary(
         user_id=user_id,
         date=d,
-        total_calories=total_calories,
-        total_sport=total_sport,
         tdee=tdee,
-        balance=balance,
+        calories_apportees=calories_apportees,
+        calories_brulees=calories_brulees,
+        balance_calorique=balance_calorique,
         conseil=conseil,
     )
 
     return DailySummary(
         date=d,
-        total_calories=total_calories,
-        total_sport=total_sport,
+        calories_apportees=calories_apportees,
+        calories_brulees=calories_brulees,
         tdee=tdee,
-        balance=balance,
+        balance_calorique=balance_calorique,
         conseil=conseil,
     )
 
@@ -341,10 +341,10 @@ def get_history(
     return [
         DailySummary(
             date=rec["date"],
-            total_calories=rec.get("total_calories", 0),
-            total_sport=rec.get("total_sport", 0),
+            calories_apportees=rec.get("calories_apportees", 0),
+            calories_brulees=rec.get("calories_brulees", 0),
             tdee=rec.get("tdee", 0),
-            balance=rec.get("balance", 0),
+            balance_calorique=rec.get("balance_calorique", 0),
             conseil=rec.get("conseil", "")
         )
         for rec in recs

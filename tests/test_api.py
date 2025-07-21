@@ -90,19 +90,19 @@ def mock_router(monkeypatch):
     monkeypatch.setattr(db, 'insert_activity', lambda *args, **kwargs: 'fake-activity-id')
     monkeypatch.setattr(db, 'get_daily_summary', lambda *args, **kwargs: {
         "date": args[1] if len(args) > 1 else kwargs.get('date'),
-        "total_calories": 2000.0,
-        "total_sport": 300.0,
+        "calories_apportees": 2000.0,
+        "calories_brulees": 300.0,
         "tdee": 1800.0,
-        "balance": 200.0,
+        "balance_calorique": 200.0,
         "conseil": "test"
     })
     monkeypatch.setattr(db, 'get_daily_summaries', lambda *args, **kwargs: [
         {
             "date": "2023-01-01",
-            "total_calories": 2000.0,
-            "total_sport": 300.0,
+            "calories_apportees": 2000.0,
+            "calories_brulees": 300.0,
             "tdee": 1800.0,
-            "balance": 200.0,
+            "balance_calorique": 200.0,
             "conseil": "test"
         }
     ])
@@ -262,7 +262,7 @@ def test_daily_summary_integration_structure():
             res = await ac.get("/api/daily-summary", params={"date_str": "2023-01-02"})
             assert res.status_code == 200
             data = res.json()
-            assert all(k in data for k in ("date", "total_calories", "total_sport", "tdee", "balance", "conseil"))
+            assert all(k in data for k in ("date", "calories_apportees", "calories_brulees", "tdee", "balance_calorique", "conseil"))
     run_async(inner())
 
 
@@ -275,7 +275,7 @@ def test_history_integration_structure():
             data = res.json()
             assert isinstance(data, list) and data
             first = data[0]
-            assert all(k in first for k in ("date", "total_calories", "total_sport", "tdee", "balance", "conseil"))
+            assert all(k in first for k in ("date", "calories_apportees", "calories_brulees", "tdee", "balance_calorique", "conseil"))
     run_async(inner())
 
 

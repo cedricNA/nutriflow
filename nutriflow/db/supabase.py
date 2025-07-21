@@ -123,10 +123,10 @@ def get_daily_summaries(user_id, limit=30):
 def insert_daily_summary(
     user_id,
     date,
-    total_calories,
-    total_sport,
     tdee,
-    balance,
+    calories_apportees,
+    calories_brulees,
+    balance_calorique,
     conseil,
 ):
     supabase = get_supabase_client()
@@ -136,10 +136,10 @@ def insert_daily_summary(
             {
                 "user_id": user_id,
                 "date": date,
-                "total_calories": total_calories,
-                "total_sport": total_sport,
                 "tdee": tdee,
-                "balance": balance,
+                "calories_apportees": calories_apportees,
+                "calories_brulees": calories_brulees,
+                "balance_calorique": balance_calorique,
                 "conseil": conseil,
             }
         )
@@ -153,10 +153,10 @@ def insert_daily_summary(
 def update_daily_summary(
     user_id,
     date,
-    total_calories,
-    total_sport,
     tdee,
-    balance,
+    calories_apportees,
+    calories_brulees,
+    balance_calorique,
     conseil,
 ):
     supabase = get_supabase_client()
@@ -164,10 +164,10 @@ def update_daily_summary(
         supabase.table("daily_summary")
         .update(
             {
-                "total_calories": total_calories,
-                "total_sport": total_sport,
                 "tdee": tdee,
-                "balance": balance,
+                "calories_apportees": calories_apportees,
+                "calories_brulees": calories_brulees,
+                "balance_calorique": balance_calorique,
                 "conseil": conseil,
             }
         )
