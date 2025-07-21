@@ -261,20 +261,35 @@ def daily_summary(date_str: str = Query(default=None, description="Date au forma
     bmr = calculer_bmr(user["poids_kg"], user["taille_cm"], user["age"], user["sexe"])
     tdee = calculer_tdee(user["poids_kg"], user["taille_cm"], user["age"], user["sexe"], total_sport)
 
-    # 5. Balance et conseil personnalisé
+    # 5. Balance et conseil personnalisé (mieux adapté selon l'objectif)
     balance = total_calories - tdee
-    if user["objectif"] == "perte":
-        conseil = (
-            "Déficit souhaité pour perdre du poids" if balance < 0 else "Surplus, attention si vous souhaitez maigrir"
-        )
-    elif user["objectif"] == "prise":
-        conseil = (
-            "Surplus idéal pour prendre de la masse" if balance > 0 else "Pas assez de calories pour progresser"
-        )
-    else:
-        conseil = (
-            "Maintien calorique atteint" if abs(balance) < 100 else "Déséquilibre léger aujourd’hui"
-        )
+
+    objectif = user.get("objectif", "maintien")
+    if objectif == "perte":
+        if balance < -300:
+            conseil = "Déficit important, perte de poids rapide possible."
+        elif balance < 0:
+            conseil = "Déficit modéré, bonne trajectoire pour perdre du poids."
+        elif balance < 150:
+            conseil = "Attention, vous êtes en léger surplus."
+        else:
+            conseil = "Surplus, risque de prise de poids."
+    elif objectif == "prise":
+        if balance > 300:
+            conseil = "Surplus optimal pour prise de masse."
+        elif balance > 0:
+            conseil = "Surplus léger, progression possible mais lente."
+        elif balance > -150:
+            conseil = "Attention, vous êtes presque à l’équilibre."
+        else:
+            conseil = "Déficit, trop faible pour prise de masse."
+    else:  # maintien
+        if abs(balance) < 150:
+            conseil = "Maintien calorique atteint."
+        elif balance < 0:
+            conseil = "Léger déficit, surveillez si ce n’est pas souhaité."
+        else:
+            conseil = "Léger surplus, surveillez si ce n’est pas souhaité."
 
     # 6. Sauvegarde dans Supabase
     db.insert_daily_summary(
@@ -295,3 +310,23 @@ def daily_summary(date_str: str = Query(default=None, description="Date au forma
         balance=balance,
         conseil=conseil,
     )
+
+
+@router.get("/history", response_model=List[DailySummary])
+def get_history(
+    limit: int = Query(default=30, description="Nombre de jours à retourner"),
+    user_id: str = TEST_USER_ID
+):
+    """Retourne l'historique des bilans journaliers pour l'utilisateur connecté (max: limit)."""
+    recs = db.get_daily_summaries(user_id, limit)
+    return [
+        DailySummary(
+            date=rec["date"],
+            total_calories=rec.get("total_calories", 0),
+            total_sport=rec.get("total_sport", 0),
+            tdee=rec.get("tdee", 0),
+            balance=rec.get("balance", 0),
+            conseil=rec.get("conseil", "")
+        )
+        for rec in recs
+    ]
