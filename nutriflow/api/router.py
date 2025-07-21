@@ -21,7 +21,8 @@ from nutriflow.services import (
     convert_nutritionix_to_df,
     calculate_totals,
     calculer_bmr,
-    calculer_tdee
+    calculer_tdee,
+    SPORTS_MAPPING
 )
 
 router = APIRouter()
@@ -175,6 +176,12 @@ def search(query: str = Query(..., min_length=1, description="Terme de recherche
     if not prod:
         raise HTTPException(status_code=404, detail="Produit non trouvé")
     return OFFProduct(**prod)
+
+
+@router.get("/sports", response_model=List[str])
+def get_supported_sports() -> List[str]:
+    """Retourne la liste des activités sportives reconnues."""
+    return list(SPORTS_MAPPING.keys())
 
 @router.post("/exercise", response_model=List[ExerciseResult])
 def exercise(data: ExerciseQuery):
