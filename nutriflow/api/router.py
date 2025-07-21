@@ -5,7 +5,6 @@ import unicodedata
 from typing import List, Dict, Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
-from googletrans import Translator
 from nutriflow.db.supabase import insert_meal, insert_meal_item, insert_activity
 import nutriflow.db.supabase as db
 

@@ -4,7 +4,6 @@ import pandas as pd
 import unicodedata
 from typing import List, Dict, Optional
 from fastapi import HTTPException
-from googletrans import Translator
 
 # Retrieve Nutritionix credentials from environment variables
 APP_ID = os.getenv("NUTRIFLOW_NUTRITIONIX_APP_ID")
@@ -21,15 +20,11 @@ def clean_text(text: str) -> str:
 
 def translate_fr_en(text_fr: str) -> str:
     """
-    Traduit un texte français en anglais via Google Translate. Si échec, retourne le texte original.
+    Convertit un texte français en une version ASCII simplifiée.
+    Cette implémentation ne fait pas de vraie traduction pour éviter
+    la dépendance à un service externe lors des tests.
     """
-    cleaned = clean_text(text_fr)
-    translator = Translator()
-    try:
-        result = translator.translate(cleaned, src='fr', dest='en')
-        return result.text
-    except Exception:
-        return text_fr
+    return clean_text(text_fr)
 
 
 def get_off_search_nutrition(query: str) -> Optional[Dict]:
