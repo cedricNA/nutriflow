@@ -77,36 +77,34 @@ def clean_text(text: str) -> str:
 
 
 def translate_fr_en(text_fr: str) -> str:
+    """Traduit du français vers l'anglais avec Google Translate.
+
+    Nettoie d'abord le texte puis tente la traduction. En cas d'échec,
+    renvoie le texte original.
     """
-    Convertit un texte français en une version ASCII simplifiée.
-    Cette implémentation ne fait pas de vraie traduction pour éviter
-    la dépendance à un service externe lors des tests.
-    """
-    return clean_text(text_fr)
+    cleaned = clean_text(text_fr)
+    translator = Translator()
+    try:
+        result = translator.translate(cleaned, src="fr", dest="en")
+        print(f"\N{CLOCKWISE OPEN CIRCLE ARROW} Traduction automatique : {cleaned} → {result.text}")
+        return result.text
+    except Exception as e:
+        print(f"\N{CROSS MARK} Erreur traduction : {e}")
+        return text_fr
 
 
 def translate_activity_fr_en(text_fr: str) -> str:
     """Traduit une activité sportive en anglais.
 
-    Utilise d'abord un mapping manuel puis Google Translate en secours.
+    Utilise d'abord un mapping manuel puis la fonction centrale de
+    traduction pour le reste.
     """
     texte = text_fr.lower()
-    mapping_hit = False
     for fr, en in SPORTS_MAPPING.items():
         if fr in texte:
             texte = texte.replace(fr, en)
-            mapping_hit = True
-    if mapping_hit:
-        return clean_text(texte)
-
-    try:
-        translator = Translator()
-        translated = translator.translate(text_fr, src="fr", dest="en")
-        print(f"\N{CLOCKWISE OPEN CIRCLE ARROW} Fallback Google Translate : {translated.text}")
-        return clean_text(translated.text)
-    except Exception as e:
-        print(f"\N{CROSS MARK} Erreur traduction Google Translate : {e}")
-        return clean_text(text_fr)
+    # On passe le texte obtenu à la fonction générique de traduction
+    return translate_fr_en(texte)
 
 
 def get_off_search_nutrition(query: str) -> Optional[Dict]:
@@ -159,6 +157,7 @@ def analyze_ingredients_nutritionix(text_fr: str) -> List[Dict]:
     Analyse d'ingrédients via Nutritionix Natural Language API.
     """
     query = translate_fr_en(text_fr)
+    print(f"\N{CLOCKWISE OPEN CIRCLE ARROW} Requête envoyée à Nutritionix : {query}")
     url = "https://trackapi.nutritionix.com/v2/natural/nutrients"
     headers = {"x-app-id": APP_ID, "x-app-key": API_KEY, "Content-Type": "application/json"}
     resp = requests.post(url, headers=headers, json={"query": query})
