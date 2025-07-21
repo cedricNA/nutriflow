@@ -7,6 +7,9 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from googletrans import Translator
 from nutriflow.db.supabase import insert_meal, insert_meal_item, insert_activity
+
+# ID utilisateur générique pour les tests/démo (doit être un UUID valide)
+TEST_USER_ID = "00000000-0000-0000-0000-000000000000"
 from datetime import date
 
 
@@ -109,7 +112,7 @@ def ingredients(data: IngredientQuery):
         ) for _, row in df.iterrows()]
 
         # === AJOUT SAUVEGARDE DANS SUPABASE ===
-        user_id = "test-user-123"  # temporairement en dur, à remplacer par l'id réel de l'utilisateur connecté
+        user_id = TEST_USER_ID  # ID générique en l'absence d'utilisateur connecté
         meal_id = insert_meal(user_id, str(date.today()), "repas", note="")
         for food in foods:
             insert_meal_item(
@@ -163,7 +166,7 @@ def exercise(data: ExerciseQuery):
             height_cm=data.height_cm, age=data.age, gender=data.gender
         )
         # ===== Sauvegarde des activités dans Supabase =====
-        user_id = "test-user-123"
+        user_id = TEST_USER_ID
         for ex in exercises_raw:
             insert_activity(
                 user_id=user_id,
