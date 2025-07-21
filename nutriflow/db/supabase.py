@@ -200,5 +200,5 @@ def update_user(user_id, data):
         .execute()
     )
     if not response.data:
-        raise Exception("Erreur update user")
+        raise Exception("Erreur lors de la mise à jour utilisateur")
     return response.data[0]
