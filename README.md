@@ -83,6 +83,19 @@ NutriFlow est une API en **FastAPI** qui t'aide à suivre ta nutrition et tes ac
     "calories_sport": 300
   }
   ```
+- **GET `/api/user/profile`** – Récupère le profil de l'utilisateur.
+  ```text
+  /api/user/profile
+  ```
+- **POST `/api/user/profile/update`** – Met à jour un ou plusieurs champs du profil.
+  ```json
+  {
+    "poids_kg": 72.5
+  }
+  ```
+
+Pour préremplir le formulaire d'activité physique, récupère d'abord ces informations
+avec `GET /api/user/profile` puis envoie-les (éventuellement modifiées) à `POST /api/exercise`.
 
 ## Lancer les tests unitaires
 
