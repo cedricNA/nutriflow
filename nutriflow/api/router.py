@@ -54,6 +54,19 @@ class BMRQuery(BaseModel):
 class TDEEQuery(BMRQuery):
     calories_sport: float = Field(0.0, ge=0, description="Calories brûlées via sport")
 
+# ----- User Profile Models -----
+class UserProfile(BaseModel):
+    poids_kg: float
+    taille_cm: float
+    age: int
+    sexe: str
+
+class UserProfileUpdate(BaseModel):
+    poids_kg: Optional[float] = None
+    taille_cm: Optional[float] = None
+    age: Optional[int] = None
+    sexe: Optional[str] = None
+
 # ----- Response Models -----
 class NutritionixFood(BaseModel):
     aliment: str
@@ -330,3 +343,41 @@ def get_history(
         )
         for rec in recs
     ]
+
+
+@router.get("/user/profile", response_model=UserProfile)
+def get_user_profile(user_id: str = TEST_USER_ID):
+    user = db.get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+    return UserProfile(
+        poids_kg=user["poids_kg"],
+        taille_cm=user["taille_cm"],
+        age=user["age"],
+        sexe=user["sexe"]
+    )
+
+
+@router.post("/user/profile/update", response_model=UserProfile)
+def update_user_profile(data: UserProfileUpdate, user_id: str = TEST_USER_ID):
+    user = db.get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+    maj = {}
+    if data.poids_kg is not None:
+        maj["poids_kg"] = data.poids_kg
+    if data.taille_cm is not None:
+        maj["taille_cm"] = data.taille_cm
+    if data.age is not None:
+        maj["age"] = data.age
+    if data.sexe is not None:
+        maj["sexe"] = data.sexe
+    if maj:
+        db.update_user(user_id, maj)
+        user.update(maj)
+    return UserProfile(
+        poids_kg=user["poids_kg"],
+        taille_cm=user["taille_cm"],
+        age=user["age"],
+        sexe=user["sexe"]
+    )

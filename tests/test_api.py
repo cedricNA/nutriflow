@@ -14,9 +14,19 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from main import app
 from nutriflow.api import router
 from nutriflow.api.router import (
-    IngredientQuery, BarcodeQuery, ExerciseQuery, BMRQuery, TDEEQuery,
-    NutritionixResponse, OFFProduct, ExerciseResult, BMRResponse, TDEResponse,
-    DailySummary
+    IngredientQuery,
+    BarcodeQuery,
+    ExerciseQuery,
+    BMRQuery,
+    TDEEQuery,
+    NutritionixResponse,
+    OFFProduct,
+    ExerciseResult,
+    BMRResponse,
+    TDEResponse,
+    DailySummary,
+    UserProfile,
+    UserProfileUpdate,
 )
 
 # Sample data for mocking
@@ -46,6 +56,13 @@ SAMPLE_PRODUCT = {
     "sugars_per_100g": 2.0,
     "proteins_per_100g": 3.0,
     "salt_per_100g": 0.5
+}
+
+SAMPLE_USER = {
+    "poids_kg": 70.0,
+    "taille_cm": 175.0,
+    "age": 30,
+    "sexe": "male",
 }
 
 @pytest.fixture(autouse=True)
@@ -93,6 +110,13 @@ def mock_router(monkeypatch):
     monkeypatch.setattr(db, 'get_meal_items', lambda *args, **kwargs: [])
     monkeypatch.setattr(db, 'get_activities', lambda *args, **kwargs: [])
     monkeypatch.setattr(db, 'insert_daily_summary', lambda *args, **kwargs: None)
+    monkeypatch.setattr(db, 'get_user', lambda *args, **kwargs: SAMPLE_USER)
+
+    def _update_user(uid, data):
+        SAMPLE_USER.update(data)
+        return SAMPLE_USER
+
+    monkeypatch.setattr(db, 'update_user', _update_user)
 
 # ----- Unit Tests -----
 
@@ -154,6 +178,19 @@ def test_history_unit():
     resp = router.get_history(limit=1)
     assert isinstance(resp, list)
     assert isinstance(resp[0], DailySummary)
+
+
+def test_get_user_profile_unit():
+    resp = router.get_user_profile()
+    assert isinstance(resp, UserProfile)
+    assert resp.poids_kg == SAMPLE_USER["poids_kg"]
+
+
+def test_update_user_profile_unit():
+    q = UserProfileUpdate(poids_kg=72.0)
+    resp = router.update_user_profile(q)
+    assert isinstance(resp, UserProfile)
+    assert resp.poids_kg == 72.0
 
 # ----- Integration Tests (structure only) -----
 
@@ -239,4 +276,26 @@ def test_history_integration_structure():
             assert isinstance(data, list) and data
             first = data[0]
             assert all(k in first for k in ("date", "total_calories", "total_sport", "tdee", "balance", "conseil"))
+    run_async(inner())
+
+
+def test_user_profile_integration_structure():
+    async def inner():
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            res = await ac.get("/api/user/profile")
+            assert res.status_code == 200
+            data = res.json()
+            assert all(k in data for k in ("poids_kg", "taille_cm", "age", "sexe"))
+    run_async(inner())
+
+
+def test_user_profile_update_integration_structure():
+    async def inner():
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            res = await ac.post("/api/user/profile/update", json={"poids_kg": 80})
+            assert res.status_code == 200
+            data = res.json()
+            assert data["poids_kg"] == 80
     run_async(inner())
