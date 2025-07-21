@@ -64,6 +64,7 @@ def mock_router(monkeypatch):
     # Mock Supabase insertion functions
     monkeypatch.setattr(router, 'insert_meal', lambda *args, **kwargs: 'fake-meal-id')
     monkeypatch.setattr(router, 'insert_meal_item', lambda *args, **kwargs: 'fake-meal-item-id')
+    monkeypatch.setattr(router, 'insert_activity', lambda *args, **kwargs: 'fake-activity-id')
 
     import nutriflow.db.supabase as db
     monkeypatch.setattr(db, 'insert_meal', lambda *args, **kwargs: 'fake-meal-id')
