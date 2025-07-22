@@ -22,37 +22,53 @@ from nutriflow.services import (
     calculate_totals,
     calculer_bmr,
     calculer_tdee,
-    SPORTS_MAPPING
+    SPORTS_MAPPING,
 )
 
 router = APIRouter()
 
+
 # ----- Services Query Models -----
 class IngredientQuery(BaseModel):
-    query: str = Field(..., min_length=1, description="Description des ingrédients en français")
+    query: str = Field(
+        ..., min_length=1, description="Description des ingrédients en français"
+    )
+
 
 class BarcodeQuery(BaseModel):
-    barcode: str = Field(..., pattern=r"^\d{8,}$", description="Code-barres du produit (au moins 8 chiffres)")
+    barcode: str = Field(
+        ...,
+        pattern=r"^\d{8,}$",
+        description="Code-barres du produit (au moins 8 chiffres)",
+    )
+
 
 class ExerciseQuery(BaseModel):
-    query: str = Field(..., min_length=1, description="Description de l'activité sportive en français")
+    query: str = Field(
+        ..., min_length=1, description="Description de l'activité sportive en français"
+    )
     weight_kg: float = Field(..., gt=0, description="Poids de l'utilisateur en kg")
     height_cm: float = Field(..., gt=0, description="Taille de l'utilisateur en cm")
     age: int = Field(..., gt=0, description="Âge de l'utilisateur")
     gender: str = Field(
         "male",
         pattern=r"^(male|female)$",
-        description="Genre de l'utilisateur ('male' ou 'female')"
+        description="Genre de l'utilisateur ('male' ou 'female')",
     )
+
 
 class BMRQuery(BaseModel):
     poids_kg: float = Field(..., gt=0, description="Poids de l'utilisateur en kg")
     taille_cm: float = Field(..., gt=0, description="Taille de l'utilisateur en cm")
     age: int = Field(..., gt=0, description="Âge de l'utilisateur")
-    sexe: str = Field(..., pattern=r"^(male|female|homme|femme)$", description="Sexe de l'utilisateur")
+    sexe: str = Field(
+        ..., pattern=r"^(male|female|homme|femme)$", description="Sexe de l'utilisateur"
+    )
+
 
 class TDEEQuery(BMRQuery):
     calories_sport: float = Field(0.0, ge=0, description="Calories brûlées via sport")
+
 
 # ----- User Profile Models -----
 class UserProfile(BaseModel):
@@ -61,11 +77,13 @@ class UserProfile(BaseModel):
     age: int
     sexe: str
 
+
 class UserProfileUpdate(BaseModel):
     poids_kg: Optional[float] = None
     taille_cm: Optional[float] = None
     age: Optional[int] = None
     sexe: Optional[str] = None
+
 
 # ----- Response Models -----
 class NutritionixFood(BaseModel):
@@ -77,15 +95,18 @@ class NutritionixFood(BaseModel):
     glucides_g: float
     lipides_g: float
 
+
 class Totals(BaseModel):
     total_calories: float = Field(..., description="Total des calories (kcal)")
     total_proteins_g: float = Field(..., description="Total des protéines (g)")
     total_carbs_g: float = Field(..., description="Total des glucides (g)")
     total_fats_g: float = Field(..., description="Total des lipides (g)")
 
+
 class NutritionixResponse(BaseModel):
     foods: List[NutritionixFood]
     totals: Totals
+
 
 class OFFProduct(BaseModel):
     name: str
@@ -96,19 +117,25 @@ class OFFProduct(BaseModel):
     proteins_per_100g: Optional[float]
     salt_per_100g: Optional[float]
 
+
 class ExerciseResult(BaseModel):
     name: str = Field(..., description="Nom de l'exercice")
     duration_min: float = Field(..., description="Durée en minutes")
     calories: float = Field(..., description="Calories brûlées")
     met: Optional[float] = Field(None, description="MET approximatif")
 
+
 class BMRResponse(BaseModel):
     bmr: float = Field(..., description="Métabolisme de base calculé (kcal)")
+
 
 class TDEResponse(BaseModel):
     bmr: float = Field(..., description="Métabolisme de base calculé (kcal)")
     calories_sport: float = Field(..., description="Calories brûlées via sport (kcal)")
-    tdee: float = Field(..., description="Total Daily Energy Expenditure calculé (kcal)")
+    tdee: float = Field(
+        ..., description="Total Daily Energy Expenditure calculé (kcal)"
+    )
+
 
 class DailySummary(BaseModel):
     date: str
@@ -117,6 +144,7 @@ class DailySummary(BaseModel):
     tdee: float
     balance_calorique: float
     conseil: str
+
 
 # ----- Endpoints -----
 @router.post("/ingredients", response_model=NutritionixResponse)
@@ -128,10 +156,18 @@ def ingredients(data: IngredientQuery):
         foods_raw = analyze_ingredients_nutritionix(data.query)
         df = convert_nutritionix_to_df(foods_raw)
         totals_dict = calculate_totals(df)
-        foods = [NutritionixFood(
-            aliment=row["Aliment"], quantite=row["Quantite"], poids_g=row["Poids_g"],
-            calories=row["Calories"], proteines_g=row["Proteines_g"], glucides_g=row["Glucides_g"], lipides_g=row["Lipides_g"],
-        ) for _, row in df.iterrows()]
+        foods = [
+            NutritionixFood(
+                aliment=row["Aliment"],
+                quantite=row["Quantite"],
+                poids_g=row["Poids_g"],
+                calories=row["Calories"],
+                proteines_g=row["Proteines_g"],
+                glucides_g=row["Glucides_g"],
+                lipides_g=row["Lipides_g"],
+            )
+            for _, row in df.iterrows()
+        ]
 
         # === AJOUT SAUVEGARDE DANS SUPABASE ===
         user_id = TEST_USER_ID  # ID générique en l'absence d'utilisateur connecté
@@ -147,15 +183,15 @@ def ingredients(data: IngredientQuery):
                 proteines_g=food.proteines_g,
                 glucides_g=food.glucides_g,
                 lipides_g=food.lipides_g,
-                barcode=None
+                barcode=None,
             )
         # === FIN SAUVEGARDE ===
 
         return NutritionixResponse(foods=foods, totals=Totals(**totals_dict))
 
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/barcode", response_model=OFFProduct)
 def barcode(data: BarcodeQuery):
@@ -167,8 +203,11 @@ def barcode(data: BarcodeQuery):
         raise HTTPException(status_code=404, detail="Produit non trouvé")
     return OFFProduct(**prod)
 
+
 @router.get("/search", response_model=OFFProduct)
-def search(query: str = Query(..., min_length=1, description="Terme de recherche produit")):
+def search(
+    query: str = Query(..., min_length=1, description="Terme de recherche produit")
+):
     """
     Recherche un produit sur OpenFoodFacts par terme.
     """
@@ -183,6 +222,7 @@ def get_supported_sports() -> List[str]:
     """Retourne la liste des activités sportives reconnues."""
     return list(SPORTS_MAPPING.keys())
 
+
 @router.post("/exercise", response_model=List[ExerciseResult])
 def exercise(data: ExerciseQuery):
     """
@@ -190,8 +230,11 @@ def exercise(data: ExerciseQuery):
     """
     try:
         exercises_raw = analyze_exercise_nutritionix(
-            text_fr=data.query, weight_kg=data.weight_kg,
-            height_cm=data.height_cm, age=data.age, gender=data.gender
+            text_fr=data.query,
+            weight_kg=data.weight_kg,
+            height_cm=data.height_cm,
+            age=data.age,
+            gender=data.gender,
         )
         # ===== Sauvegarde des activités dans Supabase =====
         user_id = TEST_USER_ID
@@ -201,17 +244,27 @@ def exercise(data: ExerciseQuery):
                 date=str(date.today()),
                 description=ex.get("name", ""),
                 duree_min=ex.get("duration_min", 0),
-                calories_brulees=ex.get("nf_calories", 0)
+                calories_brulees=ex.get("nf_calories", 0),
             )
         # ===== Fin sauvegarde =====
-        results = [ExerciseResult(
-            name=ex.get("name",""), duration_min=ex.get("duration_min",0), calories=ex.get("nf_calories",0), met=ex.get("met")
-        ) for ex in exercises_raw]
+        results = [
+            ExerciseResult(
+                name=ex.get("name", ""),
+                duration_min=ex.get("duration_min", 0),
+                calories=ex.get("nf_calories", 0),
+                met=ex.get("met"),
+            )
+            for ex in exercises_raw
+        ]
         return results
     except HTTPException:
         raise
     except Exception:
-        raise HTTPException(status_code=503, detail="Service d'exercice temporairement indisponible, réessayez plus tard")
+        raise HTTPException(
+            status_code=503,
+            detail="Service d'exercice temporairement indisponible, réessayez plus tard",
+        )
+
 
 @router.post("/bmr", response_model=BMRResponse)
 def bmr(data: BMRQuery):
@@ -224,21 +277,28 @@ def bmr(data: BMRQuery):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @router.post("/tdee", response_model=TDEResponse)
 def tdee(data: TDEEQuery):
     """
     Calcule le TDEE (BMR + calories sportives).
     """
     try:
-        tdee_value = calculer_tdee(data.poids_kg, data.taille_cm, data.age, data.sexe, data.calories_sport)
+        tdee_value = calculer_tdee(
+            data.poids_kg, data.taille_cm, data.age, data.sexe, data.calories_sport
+        )
         bmr_value = calculer_bmr(data.poids_kg, data.taille_cm, data.age, data.sexe)
-        return TDEResponse(bmr=bmr_value, calories_sport=data.calories_sport, tdee=tdee_value)
+        return TDEResponse(
+            bmr=bmr_value, calories_sport=data.calories_sport, tdee=tdee_value
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/daily-summary", response_model=DailySummary)
-def daily_summary(date_str: str = Query(default=None, description="Date au format YYYY-MM-DD")):
+def daily_summary(
+    date_str: str = Query(default=None, description="Date au format YYYY-MM-DD")
+):
     """Calcule et/ou retourne le résumé de la journée (bilan nutritionnel) pour une date donnée."""
     user_id = TEST_USER_ID
     today = str(date.today())
@@ -256,16 +316,15 @@ def daily_summary(date_str: str = Query(default=None, description="Date au forma
             conseil=rec.get("conseil") or "",
         )
 
-    # 1. Calcule les apports du jour
-    meals = db.get_meals(user_id, d)
-    meal_items = []
-    for meal in meals:
-        meal_items += db.get_meal_items(meal["id"])
-    calories_apportees = sum(item["calories"] for item in meal_items) if meal_items else 0.0
+    # 1. Calcule les apports du jour via la vue daily_nutrition_totals
+    totals = db.get_daily_nutrition(user_id, d)
+    calories_apportees = totals.get("total_calories", 0.0)
 
     # 2. Calcule les calories sportives
     activities = db.get_activities(user_id, d)
-    calories_brulees = sum(act["calories_brulees"] for act in activities) if activities else 0.0
+    calories_brulees = (
+        sum(act["calories_brulees"] for act in activities) if activities else 0.0
+    )
 
     # 3. Profil utilisateur (exemple simple ici)
     user = {
@@ -278,7 +337,9 @@ def daily_summary(date_str: str = Query(default=None, description="Date au forma
 
     # 4. Calcul TDEE
     bmr = calculer_bmr(user["poids_kg"], user["taille_cm"], user["age"], user["sexe"])
-    tdee = calculer_tdee(user["poids_kg"], user["taille_cm"], user["age"], user["sexe"], calories_brulees)
+    tdee = calculer_tdee(
+        user["poids_kg"], user["taille_cm"], user["age"], user["sexe"], calories_brulees
+    )
 
     # 5. Balance et conseil personnalisé (mieux adapté selon l'objectif)
     balance_calorique = calories_apportees - tdee
@@ -334,7 +395,7 @@ def daily_summary(date_str: str = Query(default=None, description="Date au forma
 @router.get("/history", response_model=List[DailySummary])
 def get_history(
     limit: int = Query(default=30, description="Nombre de jours à retourner"),
-    user_id: str = TEST_USER_ID
+    user_id: str = TEST_USER_ID,
 ):
     """Retourne l'historique des bilans journaliers pour l'utilisateur connecté (max: limit)."""
     recs = db.get_daily_summaries(user_id, limit)
@@ -345,7 +406,7 @@ def get_history(
             calories_brulees=rec.get("calories_brulees", 0),
             tdee=rec.get("tdee", 0),
             balance_calorique=rec.get("balance_calorique", 0),
-            conseil=rec.get("conseil", "")
+            conseil=rec.get("conseil", ""),
         )
         for rec in recs
     ]
@@ -360,7 +421,7 @@ def get_user_profile(user_id: str = TEST_USER_ID):
         poids_kg=user["poids_kg"],
         taille_cm=user["taille_cm"],
         age=user["age"],
-        sexe=user["sexe"]
+        sexe=user["sexe"],
     )
 
 
@@ -385,5 +446,5 @@ def update_user_profile(data: UserProfileUpdate, user_id: str = TEST_USER_ID):
         poids_kg=user["poids_kg"],
         taille_cm=user["taille_cm"],
         age=user["age"],
-        sexe=user["sexe"]
+        sexe=user["sexe"],
     )

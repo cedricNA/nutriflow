@@ -1,6 +1,7 @@
 import os
 from supabase import create_client, Client
 
+
 def get_supabase_client():
     SUPABASE_URL = os.getenv("SUPABASE_URL")
     SUPABASE_KEY = os.getenv("SUPABASE_KEY")
@@ -8,51 +9,77 @@ def get_supabase_client():
         raise RuntimeError("Supabase credentials are not set")
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
+
 def insert_meal(user_id, date, type_repas, note=""):
     supabase = get_supabase_client()
-    response = supabase.table("meals").insert({
-        "user_id": user_id,
-        "date": date,
-        "type": type_repas,
-        "note": note
-    }).execute()
+    response = (
+        supabase.table("meals")
+        .insert({"user_id": user_id, "date": date, "type": type_repas, "note": note})
+        .execute()
+    )
     if not response.data:
         raise Exception("Erreur insertion meal")
     return response.data[0]["id"]
 
-def insert_meal_item(meal_id, nom_aliment, marque, quantite, unite, calories, proteines_g, glucides_g, lipides_g, barcode=None):
+
+def insert_meal_item(
+    meal_id,
+    nom_aliment,
+    marque,
+    quantite,
+    unite,
+    calories,
+    proteines_g,
+    glucides_g,
+    lipides_g,
+    barcode=None,
+):
     supabase = get_supabase_client()
-    response = supabase.table("meal_items").insert({
-        "meal_id": meal_id,
-        "nom_aliment": nom_aliment,
-        "marque": marque,
-        "quantite": quantite,
-        "unite": unite,
-        "calories": calories,
-        "proteines_g": proteines_g,
-        "glucides_g": glucides_g,
-        "lipides_g": lipides_g,
-        "barcode": barcode
-    }).execute()
+    response = (
+        supabase.table("meal_items")
+        .insert(
+            {
+                "meal_id": meal_id,
+                "nom_aliment": nom_aliment,
+                "marque": marque,
+                "quantite": quantite,
+                "unite": unite,
+                "calories": calories,
+                "proteines_g": proteines_g,
+                "glucides_g": glucides_g,
+                "lipides_g": lipides_g,
+                "barcode": barcode,
+            }
+        )
+        .execute()
+    )
     if not response.data:
         raise Exception("Erreur insertion meal_item")
     return response.data[0]["id"]
 
+
 def insert_activity(user_id, date, description, duree_min, calories_brulees):
     supabase = get_supabase_client()
-    response = supabase.table("activities").insert({
-        "user_id": user_id,
-        "date": date,
-        "description": description,
-        "duree_min": duree_min,
-        "calories_brulees": calories_brulees
-    }).execute()
+    response = (
+        supabase.table("activities")
+        .insert(
+            {
+                "user_id": user_id,
+                "date": date,
+                "description": description,
+                "duree_min": duree_min,
+                "calories_brulees": calories_brulees,
+            }
+        )
+        .execute()
+    )
     if not response.data:
         raise Exception("Erreur insertion activity")
     return response.data[0]["id"]
 
 
 # ----- Fonctions lecture -----
+
 
 def get_meals(user_id, date):
     """Récupère la liste des repas pour un utilisateur et une date."""
@@ -70,12 +97,7 @@ def get_meals(user_id, date):
 def get_meal_items(meal_id):
     """Récupère les aliments liés à un repas."""
     supabase = get_supabase_client()
-    response = (
-        supabase.table("meal_items")
-        .select("*")
-        .eq("meal_id", meal_id)
-        .execute()
-    )
+    response = supabase.table("meal_items").select("*").eq("meal_id", meal_id).execute()
     return response.data or []
 
 
@@ -92,7 +114,28 @@ def get_activities(user_id, date):
     return response.data or []
 
 
+def get_daily_nutrition(user_id: str, date: str):
+    """Récupère les totaux nutritionnels d'une journée via la vue SQL."""
+    supabase = get_supabase_client()
+    result = (
+        supabase.table("daily_nutrition_totals")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("date", date)
+        .execute()
+    )
+    if not result.data:
+        return {
+            "total_calories": 0.0,
+            "total_proteins_g": 0.0,
+            "total_carbs_g": 0.0,
+            "total_fats_g": 0.0,
+        }
+    return result.data[0]
+
+
 # ----- Daily Summary -----
+
 
 def get_daily_summary(user_id, date):
     supabase = get_supabase_client()
@@ -182,23 +225,13 @@ def update_daily_summary(
 
 def get_user(user_id):
     supabase = get_supabase_client()
-    response = (
-        supabase.table("users")
-        .select("*")
-        .eq("id", user_id)
-        .execute()
-    )
+    response = supabase.table("users").select("*").eq("id", user_id).execute()
     return response.data[0] if response.data else None
 
 
 def update_user(user_id, data):
     supabase = get_supabase_client()
-    response = (
-        supabase.table("users")
-        .update(data)
-        .eq("id", user_id)
-        .execute()
-    )
+    response = supabase.table("users").update(data).eq("id", user_id).execute()
     if not response.data:
         raise Exception("Erreur lors de la mise à jour utilisateur")
     return response.data[0]

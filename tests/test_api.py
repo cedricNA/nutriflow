@@ -28,25 +28,26 @@ from nutriflow.api.router import (
     UserProfile,
     UserProfileUpdate,
 )
+import nutriflow.db.supabase as db
+from nutriflow.db.supabase import get_daily_nutrition as original_get_daily_nutrition
 
 # Sample data for mocking
-SAMPLE_FOODS = [{
-    "food_name": "flocons d'avoine",
-    "serving_qty": 50,
-    "serving_unit": "g",
-    "serving_weight_grams": 50,
-    "nf_calories": 190,
-    "nf_protein": 6.5,
-    "nf_total_carbohydrate": 32,
-    "nf_total_fat": 3.5
-}]
+SAMPLE_FOODS = [
+    {
+        "food_name": "flocons d'avoine",
+        "serving_qty": 50,
+        "serving_unit": "g",
+        "serving_weight_grams": 50,
+        "nf_calories": 190,
+        "nf_protein": 6.5,
+        "nf_total_carbohydrate": 32,
+        "nf_total_fat": 3.5,
+    }
+]
 
-SAMPLE_EXERCISES = [{
-    "name": "running",
-    "duration_min": 30,
-    "nf_calories": 300,
-    "met": 8.0
-}]
+SAMPLE_EXERCISES = [
+    {"name": "running", "duration_min": 30, "nf_calories": 300, "met": 8.0}
+]
 
 SAMPLE_PRODUCT = {
     "name": "TestProduct",
@@ -55,7 +56,7 @@ SAMPLE_PRODUCT = {
     "fat_per_100g": 1.0,
     "sugars_per_100g": 2.0,
     "proteins_per_100g": 3.0,
-    "salt_per_100g": 0.5
+    "salt_per_100g": 0.5,
 }
 
 SAMPLE_USER = {
@@ -65,60 +66,119 @@ SAMPLE_USER = {
     "sexe": "male",
 }
 
+
 @pytest.fixture(autouse=True)
 def mock_router(monkeypatch):
     # Unit test mocks on router module
-    monkeypatch.setattr(router, 'analyze_ingredients_nutritionix', lambda q: SAMPLE_FOODS)
-    monkeypatch.setattr(router, 'convert_nutritionix_to_df', lambda foods: pd.DataFrame([
-        {"Aliment": "flocons d'avoine", "Quantite": "50 g", "Poids_g": 50, "Calories": 190, "Proteines_g": 6.5, "Glucides_g": 32, "Lipides_g": 3.5}
-    ]))
-    monkeypatch.setattr(router, 'calculate_totals', lambda df: {"total_calories": 190, "total_proteins_g": 6.5, "total_carbs_g": 32, "total_fats_g": 3.5})
-    monkeypatch.setattr(router, 'get_off_search_nutrition', lambda q: SAMPLE_PRODUCT)
-    monkeypatch.setattr(router, 'get_off_nutrition_by_barcode', lambda code: SAMPLE_PRODUCT)
-    monkeypatch.setattr(router, 'analyze_exercise_nutritionix', lambda **kwargs: SAMPLE_EXERCISES)
-    monkeypatch.setattr(router, 'calculer_bmr', lambda p, t, a, s: 1500.0)
-    monkeypatch.setattr(router, 'calculer_tdee', lambda p, t, a, s, cs: 1800.0)
+    monkeypatch.setattr(
+        router, "analyze_ingredients_nutritionix", lambda q: SAMPLE_FOODS
+    )
+    monkeypatch.setattr(
+        router,
+        "convert_nutritionix_to_df",
+        lambda foods: pd.DataFrame(
+            [
+                {
+                    "Aliment": "flocons d'avoine",
+                    "Quantite": "50 g",
+                    "Poids_g": 50,
+                    "Calories": 190,
+                    "Proteines_g": 6.5,
+                    "Glucides_g": 32,
+                    "Lipides_g": 3.5,
+                }
+            ]
+        ),
+    )
+    monkeypatch.setattr(
+        router,
+        "calculate_totals",
+        lambda df: {
+            "total_calories": 190,
+            "total_proteins_g": 6.5,
+            "total_carbs_g": 32,
+            "total_fats_g": 3.5,
+        },
+    )
+    monkeypatch.setattr(router, "get_off_search_nutrition", lambda q: SAMPLE_PRODUCT)
+    monkeypatch.setattr(
+        router, "get_off_nutrition_by_barcode", lambda code: SAMPLE_PRODUCT
+    )
+    monkeypatch.setattr(
+        router, "analyze_exercise_nutritionix", lambda **kwargs: SAMPLE_EXERCISES
+    )
+    monkeypatch.setattr(router, "calculer_bmr", lambda p, t, a, s: 1500.0)
+    monkeypatch.setattr(router, "calculer_tdee", lambda p, t, a, s, cs: 1800.0)
 
     # Mock Supabase insertion functions
-    monkeypatch.setattr(router, 'insert_meal', lambda *args, **kwargs: 'fake-meal-id')
-    monkeypatch.setattr(router, 'insert_meal_item', lambda *args, **kwargs: 'fake-meal-item-id')
-    monkeypatch.setattr(router, 'insert_activity', lambda *args, **kwargs: 'fake-activity-id')
+    monkeypatch.setattr(router, "insert_meal", lambda *args, **kwargs: "fake-meal-id")
+    monkeypatch.setattr(
+        router, "insert_meal_item", lambda *args, **kwargs: "fake-meal-item-id"
+    )
+    monkeypatch.setattr(
+        router, "insert_activity", lambda *args, **kwargs: "fake-activity-id"
+    )
 
     import nutriflow.db.supabase as db
-    monkeypatch.setattr(db, 'insert_meal', lambda *args, **kwargs: 'fake-meal-id')
-    monkeypatch.setattr(db, 'insert_meal_item', lambda *args, **kwargs: 'fake-meal-item-id')
-    monkeypatch.setattr(db, 'insert_activity', lambda *args, **kwargs: 'fake-activity-id')
-    monkeypatch.setattr(db, 'get_daily_summary', lambda *args, **kwargs: {
-        "date": args[1] if len(args) > 1 else kwargs.get('date'),
-        "calories_apportees": 2000.0,
-        "calories_brulees": 300.0,
-        "tdee": 1800.0,
-        "balance_calorique": 200.0,
-        "conseil": "test"
-    })
-    monkeypatch.setattr(db, 'get_daily_summaries', lambda *args, **kwargs: [
-        {
-            "date": "2023-01-01",
+
+    monkeypatch.setattr(db, "insert_meal", lambda *args, **kwargs: "fake-meal-id")
+    monkeypatch.setattr(
+        db, "insert_meal_item", lambda *args, **kwargs: "fake-meal-item-id"
+    )
+    monkeypatch.setattr(
+        db, "insert_activity", lambda *args, **kwargs: "fake-activity-id"
+    )
+    monkeypatch.setattr(
+        db,
+        "get_daily_summary",
+        lambda *args, **kwargs: {
+            "date": args[1] if len(args) > 1 else kwargs.get("date"),
             "calories_apportees": 2000.0,
             "calories_brulees": 300.0,
             "tdee": 1800.0,
             "balance_calorique": 200.0,
-            "conseil": "test"
-        }
-    ])
-    monkeypatch.setattr(db, 'get_meals', lambda *args, **kwargs: [])
-    monkeypatch.setattr(db, 'get_meal_items', lambda *args, **kwargs: [])
-    monkeypatch.setattr(db, 'get_activities', lambda *args, **kwargs: [])
-    monkeypatch.setattr(db, 'insert_daily_summary', lambda *args, **kwargs: None)
-    monkeypatch.setattr(db, 'get_user', lambda *args, **kwargs: SAMPLE_USER)
+            "conseil": "test",
+        },
+    )
+    monkeypatch.setattr(
+        db,
+        "get_daily_summaries",
+        lambda *args, **kwargs: [
+            {
+                "date": "2023-01-01",
+                "calories_apportees": 2000.0,
+                "calories_brulees": 300.0,
+                "tdee": 1800.0,
+                "balance_calorique": 200.0,
+                "conseil": "test",
+            }
+        ],
+    )
+    monkeypatch.setattr(db, "get_meals", lambda *args, **kwargs: [])
+    monkeypatch.setattr(db, "get_meal_items", lambda *args, **kwargs: [])
+    monkeypatch.setattr(db, "get_activities", lambda *args, **kwargs: [])
+    monkeypatch.setattr(db, "insert_daily_summary", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        db,
+        "get_daily_nutrition",
+        lambda *args, **kwargs: {
+            "total_calories": 0.0,
+            "total_proteins_g": 0.0,
+            "total_carbs_g": 0.0,
+            "total_fats_g": 0.0,
+        },
+    )
+    monkeypatch.setattr(db, "get_user", lambda *args, **kwargs: SAMPLE_USER)
 
     def _update_user(uid, data):
         SAMPLE_USER.update(data)
         return SAMPLE_USER
 
-    monkeypatch.setattr(db, 'update_user', _update_user)
+    monkeypatch.setattr(db, "update_user", _update_user)
+
 
 # ----- Unit Tests -----
+
 
 def test_ingredients_unit():
     q = IngredientQuery(query="50g flocons d'avoine")
@@ -142,7 +202,9 @@ def test_search_unit():
 
 
 def test_exercise_unit():
-    q = ExerciseQuery(query="30 minutes running", weight_kg=70, height_cm=175, age=30, gender="male")
+    q = ExerciseQuery(
+        query="30 minutes running", weight_kg=70, height_cm=175, age=30, gender="male"
+    )
     resp = router.exercise(q)
     assert isinstance(resp, list)
     ex = resp[0]
@@ -192,7 +254,9 @@ def test_update_user_profile_unit():
     assert isinstance(resp, UserProfile)
     assert resp.poids_kg == 72.0
 
+
 # ----- Integration Tests (structure only) -----
+
 
 def run_async(coro):
     return asyncio.get_event_loop().run_until_complete(coro)
@@ -202,13 +266,16 @@ def test_exercise_integration_structure():
     async def inner():
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            res = await ac.post("/api/exercise", json={
-                "query": "30 minutes running",
-                "weight_kg": 70,
-                "height_cm": 175,
-                "age": 30,
-                "gender": "male"
-            })
+            res = await ac.post(
+                "/api/exercise",
+                json={
+                    "query": "30 minutes running",
+                    "weight_kg": 70,
+                    "height_cm": 175,
+                    "age": 30,
+                    "gender": "male",
+                },
+            )
             assert res.status_code == 200
             data = res.json()
             assert isinstance(data, list) and data, "Expected non-empty list"
@@ -216,6 +283,7 @@ def test_exercise_integration_structure():
             for key in ("name", "duration_min", "calories", "met"):
                 assert key in ex
                 assert isinstance(ex[key], (str, int, float))
+
     run_async(inner())
 
 
@@ -223,11 +291,14 @@ def test_ingredients_integration_structure():
     async def inner():
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            res = await ac.post("/api/ingredients", json={"query": "50g flocons d'avoine"})
+            res = await ac.post(
+                "/api/ingredients", json={"query": "50g flocons d'avoine"}
+            )
             assert res.status_code == 200
             data = res.json()
             assert "foods" in data and isinstance(data["foods"], list)
             assert "totals" in data and isinstance(data["totals"], dict)
+
     run_async(inner())
 
 
@@ -239,7 +310,10 @@ def test_barcode_integration_structure():
             assert res.status_code in (200, 404)
             if res.status_code == 200:
                 data = res.json()
-                assert all(field in data for field in ("name", "brand", "energy_kcal_per_100g"))
+                assert all(
+                    field in data for field in ("name", "brand", "energy_kcal_per_100g")
+                )
+
     run_async(inner())
 
 
@@ -252,6 +326,7 @@ def test_search_integration_structure():
             if res.status_code == 200:
                 data = res.json()
                 assert "name" in data and "energy_kcal_per_100g" in data
+
     run_async(inner())
 
 
@@ -262,7 +337,18 @@ def test_daily_summary_integration_structure():
             res = await ac.get("/api/daily-summary", params={"date_str": "2023-01-02"})
             assert res.status_code == 200
             data = res.json()
-            assert all(k in data for k in ("date", "calories_apportees", "calories_brulees", "tdee", "balance_calorique", "conseil"))
+            assert all(
+                k in data
+                for k in (
+                    "date",
+                    "calories_apportees",
+                    "calories_brulees",
+                    "tdee",
+                    "balance_calorique",
+                    "conseil",
+                )
+            )
+
     run_async(inner())
 
 
@@ -275,7 +361,18 @@ def test_history_integration_structure():
             data = res.json()
             assert isinstance(data, list) and data
             first = data[0]
-            assert all(k in first for k in ("date", "calories_apportees", "calories_brulees", "tdee", "balance_calorique", "conseil"))
+            assert all(
+                k in first
+                for k in (
+                    "date",
+                    "calories_apportees",
+                    "calories_brulees",
+                    "tdee",
+                    "balance_calorique",
+                    "conseil",
+                )
+            )
+
     run_async(inner())
 
 
@@ -287,6 +384,7 @@ def test_user_profile_integration_structure():
             assert res.status_code == 200
             data = res.json()
             assert all(k in data for k in ("poids_kg", "taille_cm", "age", "sexe"))
+
     run_async(inner())
 
 
@@ -298,4 +396,112 @@ def test_user_profile_update_integration_structure():
             assert res.status_code == 200
             data = res.json()
             assert data["poids_kg"] == 80
+
     run_async(inner())
+
+
+# ----- New Tests for daily nutrition totals -----
+
+
+def test_get_daily_nutrition_totals(monkeypatch):
+    user_id = "00000000-0000-0000-0000-000000000000"
+    date_str = "2025-07-22"
+
+    meals = [{"id": "meal1", "user_id": user_id, "date": date_str}]
+    meal_items = [
+        {
+            "meal_id": "meal1",
+            "calories": 250.0,
+            "proteines_g": 20.0,
+            "glucides_g": 30.0,
+            "lipides_g": 10.0,
+        },
+        {
+            "meal_id": "meal1",
+            "calories": 100.0,
+            "proteines_g": 5.0,
+            "glucides_g": 15.0,
+            "lipides_g": 3.0,
+        },
+    ]
+
+    class DummyResult:
+        def __init__(self, data):
+            self.data = data
+
+    class DummyClient:
+        def __init__(self, meals, items):
+            self.meals = meals
+            self.items = items
+            self.filters = {}
+
+        def table(self, name):
+            self.name = name
+            return self
+
+        def select(self, *_):
+            return self
+
+        def eq(self, col, val):
+            self.filters[col] = val
+            return self
+
+        def execute(self):
+            if self.name != "daily_nutrition_totals":
+                return DummyResult([])
+            uid = self.filters.get("user_id")
+            d = self.filters.get("date")
+            meals = [m for m in self.meals if m["user_id"] == uid and m["date"] == d]
+            meal_ids = {m["id"] for m in meals}
+            items = [it for it in self.items if it["meal_id"] in meal_ids]
+            if not items:
+                return DummyResult([])
+            totals = {
+                "user_id": uid,
+                "date": d,
+                "total_calories": sum(it["calories"] for it in items),
+                "total_proteins_g": sum(it["proteines_g"] for it in items),
+                "total_carbs_g": sum(it["glucides_g"] for it in items),
+                "total_fats_g": sum(it["lipides_g"] for it in items),
+            }
+            return DummyResult([totals])
+
+    monkeypatch.setattr(
+        db, "get_supabase_client", lambda: DummyClient(meals, meal_items)
+    )
+    monkeypatch.setattr(db, "get_daily_nutrition", original_get_daily_nutrition)
+
+    totals = db.get_daily_nutrition(user_id, date_str)
+    assert totals["total_calories"] == 350.0
+    assert totals["total_proteins_g"] == 25.0
+    assert totals["total_carbs_g"] == 45.0
+    assert totals["total_fats_g"] == 13.0
+
+
+def test_get_daily_nutrition_empty(monkeypatch):
+    class DummyResult:
+        def __init__(self, data):
+            self.data = data
+
+    class DummyClient:
+        def table(self, *_):
+            return self
+
+        def select(self, *_):
+            return self
+
+        def eq(self, *_):
+            return self
+
+        def execute(self):
+            return DummyResult([])
+
+    monkeypatch.setattr(db, "get_supabase_client", lambda: DummyClient())
+    monkeypatch.setattr(db, "get_daily_nutrition", original_get_daily_nutrition)
+    totals = db.get_daily_nutrition("u", "2025-07-22")
+    assert totals == {
+        "total_calories": 0.0,
+        "total_proteins_g": 0.0,
+        "total_carbs_g": 0.0,
+        "total_fats_g": 0.0,
+    }
