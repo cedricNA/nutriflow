@@ -37,25 +37,27 @@ def insert_meal_item(
     source=None,
 ):
     supabase = get_supabase_client()
-    response = (
-        supabase.table("meal_items")
-        .insert(
-            {
-                "meal_id": meal_id,
-                "nom_aliment": nom_aliment,
-                "marque": marque,
-                "quantite": quantite,
-                "unite": unite,
-                "calories": calories,
-                "proteines_g": proteines_g,
-                "glucides_g": glucides_g,
-                "lipides_g": lipides_g,
-                "barcode": barcode,
-                "source": source,
-            }
-        )
-        .execute()
-    )
+    payload = {
+        "meal_id": meal_id,
+        "nom_aliment": nom_aliment,
+        "marque": marque,
+        "quantite": quantite,
+        "unite": unite,
+        "calories": calories,
+        "proteines_g": proteines_g,
+        "glucides_g": glucides_g,
+        "lipides_g": lipides_g,
+        "barcode": barcode,
+        "source": source,
+    }
+    try:
+        response = supabase.table("meal_items").insert(payload).execute()
+    except APIError as e:
+        if getattr(e, "code", "") == "PGRST204" and "source" in str(e):
+            payload.pop("source", None)
+            response = supabase.table("meal_items").insert(payload).execute()
+        else:
+            raise
     if not response.data:
         raise Exception("Erreur insertion meal_item")
     return response.data[0]["id"]
