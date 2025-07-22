@@ -29,6 +29,9 @@ NutriFlow est une API en **FastAPI** qui t'aide à suivre ta nutrition et tes ac
    # Supabase
    SUPABASE_URL=https://xxxx.supabase.co
    SUPABASE_KEY=ta_cle_supabase
+
+   # LibreTranslate (optionnel)
+   NUTRIFLOW_LIBRETRANSLATE_URL=http://localhost:5000
    ```
 4. **Démarrage de l'API**
    ```bash
