@@ -39,16 +39,24 @@ class IngredientQuery(BaseModel):
     )
 
 
+
 class BarcodeQuery(BaseModel):
     barcode: str = Field(
-        ...,
-        pattern=r"^\d{8,}$",
-        description="Code-barres du produit (au moins 8 chiffres)",
+        ..., pattern=r"^\d{8,}$", description="Code-barres du produit (au moins 8 chiffres)"
     )
     quantity: float = Field(100.0, gt=0, description="Quantité du produit (g)")
     meal_id: Optional[str] = Field(
         None, description="Identifiant du repas auquel ajouter l'article"
     )
+
+
+class BarcodeQueryUserInput(BaseModel):
+    """Modèle simplifié pour l'ajout d'un produit via code-barres."""
+
+    barcode: str = Field(
+        ..., pattern=r"^\d{8,}$", description="Code-barres du produit (au moins 8 chiffres)"
+    )
+    quantity: float = Field(..., gt=0, description="Quantité du produit (g)")
 
 
 class ExerciseQuery(BaseModel):
@@ -203,7 +211,7 @@ def ingredients(data: IngredientQuery):
 
 
 @router.post("/barcode", response_model=OFFProduct)
-def barcode(data: BarcodeQuery):
+def barcode(data: BarcodeQueryUserInput):
     """
     Récupère les infos nutritionnelles d'un produit via OpenFoodFacts.
     """
@@ -214,13 +222,11 @@ def barcode(data: BarcodeQuery):
     # ===== Recherche/Création du repas =====
     user_id = TEST_USER_ID
     today = str(date.today())
-    meal_id = data.meal_id
-    if meal_id is None:
-        meals = db.get_meals(user_id, today)
-        if meals:
-            meal_id = meals[0]["id"]
-        else:
-            meal_id = insert_meal(user_id, today, "dejeuner", note="")
+    meals = db.get_meals(user_id, today)
+    if meals:
+        meal_id = meals[0]["id"]
+    else:
+        meal_id = insert_meal(user_id, today, "dejeuner", note="")
 
     # ===== Insertion de l'aliment =====
     qty = data.quantity
@@ -238,10 +244,18 @@ def barcode(data: BarcodeQuery):
         glucides_g=_mul(prod.get("sugars_per_100g")),
         lipides_g=_mul(prod.get("fat_per_100g")),
         barcode=data.barcode,
-        source="barcode",
+        source="openfoodfacts",
     )
 
-    return OFFProduct(**prod)
+    return OFFProduct(
+        name=prod.get("name", ""),
+        brand=prod.get("brand", ""),
+        energy_kcal_per_100g=_mul(prod.get("energy_kcal_per_100g")),
+        fat_per_100g=_mul(prod.get("fat_per_100g")),
+        sugars_per_100g=_mul(prod.get("sugars_per_100g")),
+        proteins_per_100g=_mul(prod.get("proteins_per_100g")),
+        salt_per_100g=_mul(prod.get("salt_per_100g")),
+    )
 
 
 @router.get("/search", response_model=OFFProduct)
