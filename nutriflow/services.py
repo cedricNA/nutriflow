@@ -79,25 +79,96 @@ def clean_text(text: str) -> str:
 
 
 def translate_fr_en(text_fr: str) -> str:
-    """Traduit du français vers l'anglais avec Google Translate.
-
-    Nettoie d'abord le texte puis tente la traduction. En cas d'échec,
-    renvoie le texte original.
-    """
-    cleaned = clean_text(text_fr)
+    # Mapping manuel FR→EN pour les aliments courants
+    corrections = {
+        "avocat": "avocado",
+        "maïs": "corn",
+        "mais": "corn",
+        "tomate cerise": "cherry tomato",
+        "œuf": "egg",
+        "oeuf": "egg",
+        "œufs": "eggs",
+        "oeufs": "eggs",
+        "pomme de terre": "potato",
+        "pommes de terre": "potatoes",
+        "pâtes": "pasta",
+        "riz": "rice",
+        "fromage": "cheese",
+        "thon": "tuna",
+        "lait": "milk",
+        "pain": "bread",
+        "yaourt": "yogurt",
+        "banane": "banana",
+        "carotte": "carrot",
+        "carottes": "carrots",
+        "poulet": "chicken breast",
+        "boeuf": "beef",
+        "steak": "steak",
+        "porc": "pork",
+        "jambon": "ham",
+        "saumon": "salmon",
+        "dinde": "turkey",
+        "haricot vert": "green bean",
+        "haricots verts": "green beans",
+        "lentilles": "lentils",
+        "pois chiche": "chickpea",
+        "pois chiches": "chickpeas",
+        "poivron": "bell pepper",
+        "poivrons": "bell peppers",
+        "courgette": "zucchini",
+        "courgettes": "zucchinis",
+        "aubergine": "eggplant",
+        "aubergines": "eggplants",
+        "oignon": "onion",
+        "oignons": "onions",
+        "ail": "garlic",
+        "laitue": "lettuce",
+        "salade": "lettuce",
+        "beurre": "butter",
+        "huile": "oil",
+        "huile d'olive": "olive oil",
+        "sucre": "sugar",
+        "miel": "honey",
+        "concombre": "cucumber",
+        "concombres": "cucumbers",
+        "pomme": "apple",
+        "pommes": "apples",
+        "poire": "pear",
+        "poires": "pears",
+        "orange": "orange",
+        "oranges": "oranges",
+        "fraise": "strawberry",
+        "fraises": "strawberries",
+        "framboise": "raspberry",
+        "framboises": "raspberries",
+        "cerise": "cherry",
+        "cerises": "cherries",
+        "abricot": "apricot",
+        "abricots": "apricots",
+        "raisin": "grape",
+        "raisins": "grapes",
+        "melon": "melon",
+        "pastèque": "watermelon",
+        "ananas": "pineapple",
+        "kiwi": "kiwi",
+        "citron": "lemon",
+        "citrons": "lemons",
+        "grenade": "pomegranate",
+        " de ": " ",
+        # ... complète au fil des tests
+    }
+    texte = clean_text(text_fr).lower()
+    for fr, en in corrections.items():
+        texte = texte.replace(fr, en)
+    from googletrans import Translator
     translator = Translator()
     try:
-        if inspect.iscoroutinefunction(translator.translate):
-            result = asyncio.run(translator.translate(cleaned, src="fr", dest="en"))
-        else:
-            result = translator.translate(cleaned, src="fr", dest="en")
-        print(
-            f"\N{CLOCKWISE OPEN CIRCLE ARROW} Traduction automatique : {cleaned} → {result.text}"
-        )
+        result = translator.translate(texte, src='fr', dest='en')
+        print(f"🔁 Texte envoyé à Nutritionix : {texte} → {result.text}")
         return result.text
     except Exception as e:
-        print(f"\N{CROSS MARK} Erreur traduction : {e}")
-        return text_fr
+        print(f"❌ Erreur traduction : {e}")
+        return texte
 
 
 def translate_activity_fr_en(text_fr: str) -> str:
@@ -209,7 +280,7 @@ def analyze_exercise_nutritionix(
     Analyse d'activité via Nutritionix Exercise API.
     """
     query = translate_activity_fr_en(text_fr)
-    print(f"🔍 Texte final envoyé à Nutritionix : {query}")
+    print(f"🔁 Requête envoyée à Nutritionix : {query}")
     url = "https://trackapi.nutritionix.com/v2/natural/exercise"
     headers = {"x-app-id": APP_ID, "x-app-key": API_KEY, "Content-Type": "application/json"}
     body = {"query": query, "gender": gender, "weight_kg": weight_kg, "height_cm": height_cm, "age": age}
