@@ -69,6 +69,46 @@ SPORTS_MAPPING: Dict[str, str] = {
     "équitation": "horse riding",
 }
 
+# Chemin par défaut du mapping CSV FR→EN
+DEFAULT_MAPPING_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "data", "fr_en_mapping.csv"
+)
+
+# Dictionnaire chargé depuis le fichier CSV (initialement None)
+_CSV_MAPPING: Optional[Dict[str, str]] = None
+
+def load_mapping_csv(filepath: str) -> Dict[str, str]:
+    """Charge un CSV `fr,en` et retourne un dictionnaire {fr: en}."""
+    df = pd.read_csv(filepath)
+    mapping = {}
+    for _, row in df.iterrows():
+        fr = clean_text(str(row["fr"]))
+        mapping[fr.lower().strip()] = str(row["en"]).strip()
+    return mapping
+
+def _ensure_mapping_loaded() -> None:
+    """Charge le mapping CSV par défaut au premier appel."""
+    global _CSV_MAPPING
+    if _CSV_MAPPING is None:
+        if os.path.exists(DEFAULT_MAPPING_PATH):
+            try:
+                _CSV_MAPPING = load_mapping_csv(DEFAULT_MAPPING_PATH)
+            except Exception:
+                _CSV_MAPPING = {}
+        else:
+            _CSV_MAPPING = {}
+
+def reload_mapping(filepath: Optional[str] = None) -> None:
+    """Recharge le mapping depuis ``filepath`` ou le chemin par défaut."""
+    global _CSV_MAPPING, DEFAULT_MAPPING_PATH
+    path = filepath or DEFAULT_MAPPING_PATH
+    if filepath:
+        DEFAULT_MAPPING_PATH = filepath
+    if os.path.exists(path):
+        _CSV_MAPPING = load_mapping_csv(path)
+    else:
+        _CSV_MAPPING = {}
+
 
 def clean_text(text: str) -> str:
     """
@@ -78,87 +118,93 @@ def clean_text(text: str) -> str:
     return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("utf-8")
 
 
+# Mapping manuel FR→EN pour les aliments courants
+MANUAL_CORRECTIONS: Dict[str, str] = {
+    "avocat": "avocado",
+    "maïs": "corn",
+    "mais": "corn",
+    "tomate cerise": "cherry tomato",
+    "œuf": "egg",
+    "oeuf": "egg",
+    "œufs": "eggs",
+    "oeufs": "eggs",
+    "pomme de terre": "potato",
+    "pommes de terre": "potatoes",
+    "pâtes": "pasta",
+    "riz": "rice",
+    "fromage": "cheese",
+    "thon": "tuna",
+    "lait": "milk",
+    "pain": "bread",
+    "yaourt": "yogurt",
+    "banane": "banana",
+    "carotte": "carrot",
+    "carottes": "carrots",
+    "poulet": "chicken breast",
+    "boeuf": "beef",
+    "steak": "steak",
+    "porc": "pork",
+    "jambon": "ham",
+    "saumon": "salmon",
+    "dinde": "turkey",
+    "haricot vert": "green bean",
+    "haricots verts": "green beans",
+    "lentilles": "lentils",
+    "pois chiche": "chickpea",
+    "pois chiches": "chickpeas",
+    "poivron": "bell pepper",
+    "poivrons": "bell peppers",
+    "courgette": "zucchini",
+    "courgettes": "zucchinis",
+    "aubergine": "eggplant",
+    "aubergines": "eggplants",
+    "oignon": "onion",
+    "oignons": "onions",
+    "ail": "garlic",
+    "laitue": "lettuce",
+    "salade": "lettuce",
+    "beurre": "butter",
+    "huile": "oil",
+    "huile d'olive": "olive oil",
+    "sucre": "sugar",
+    "miel": "honey",
+    "concombre": "cucumber",
+    "concombres": "cucumbers",
+    "pomme": "apple",
+    "pommes": "apples",
+    "poire": "pear",
+    "poires": "pears",
+    "orange": "orange",
+    "oranges": "oranges",
+    "fraise": "strawberry",
+    "fraises": "strawberries",
+    "framboise": "raspberry",
+    "framboises": "raspberries",
+    "cerise": "cherry",
+    "cerises": "cherries",
+    "abricot": "apricot",
+    "abricots": "apricots",
+    "raisin": "grape",
+    "raisins": "grapes",
+    "melon": "melon",
+    "pastèque": "watermelon",
+    "ananas": "pineapple",
+    "kiwi": "kiwi",
+    "citron": "lemon",
+    "citrons": "lemons",
+    "grenade": "pomegranate",
+    " de ": " of ",
+    # ... complète au fil des tests
+}
+
 def translate_fr_en(text_fr: str) -> str:
-    # Mapping manuel FR→EN pour les aliments courants
-    corrections = {
-        "avocat": "avocado",
-        "maïs": "corn",
-        "mais": "corn",
-        "tomate cerise": "cherry tomato",
-        "œuf": "egg",
-        "oeuf": "egg",
-        "œufs": "eggs",
-        "oeufs": "eggs",
-        "pomme de terre": "potato",
-        "pommes de terre": "potatoes",
-        "pâtes": "pasta",
-        "riz": "rice",
-        "fromage": "cheese",
-        "thon": "tuna",
-        "lait": "milk",
-        "pain": "bread",
-        "yaourt": "yogurt",
-        "banane": "banana",
-        "carotte": "carrot",
-        "carottes": "carrots",
-        "poulet": "chicken breast",
-        "boeuf": "beef",
-        "steak": "steak",
-        "porc": "pork",
-        "jambon": "ham",
-        "saumon": "salmon",
-        "dinde": "turkey",
-        "haricot vert": "green bean",
-        "haricots verts": "green beans",
-        "lentilles": "lentils",
-        "pois chiche": "chickpea",
-        "pois chiches": "chickpeas",
-        "poivron": "bell pepper",
-        "poivrons": "bell peppers",
-        "courgette": "zucchini",
-        "courgettes": "zucchinis",
-        "aubergine": "eggplant",
-        "aubergines": "eggplants",
-        "oignon": "onion",
-        "oignons": "onions",
-        "ail": "garlic",
-        "laitue": "lettuce",
-        "salade": "lettuce",
-        "beurre": "butter",
-        "huile": "oil",
-        "huile d'olive": "olive oil",
-        "sucre": "sugar",
-        "miel": "honey",
-        "concombre": "cucumber",
-        "concombres": "cucumbers",
-        "pomme": "apple",
-        "pommes": "apples",
-        "poire": "pear",
-        "poires": "pears",
-        "orange": "orange",
-        "oranges": "oranges",
-        "fraise": "strawberry",
-        "fraises": "strawberries",
-        "framboise": "raspberry",
-        "framboises": "raspberries",
-        "cerise": "cherry",
-        "cerises": "cherries",
-        "abricot": "apricot",
-        "abricots": "apricots",
-        "raisin": "grape",
-        "raisins": "grapes",
-        "melon": "melon",
-        "pastèque": "watermelon",
-        "ananas": "pineapple",
-        "kiwi": "kiwi",
-        "citron": "lemon",
-        "citrons": "lemons",
-        "grenade": "pomegranate",
-        " de ": " ",
-        # ... complète au fil des tests
-    }
+    _ensure_mapping_loaded()
     texte = clean_text(text_fr).lower()
-    for fr, en in corrections.items():
+    # On applique d'abord le mapping issu du CSV
+    for fr, en in (_CSV_MAPPING or {}).items():
+        texte = texte.replace(fr, en)
+    # Puis le mapping manuel
+    for fr, en in MANUAL_CORRECTIONS.items():
         texte = texte.replace(fr, en)
     from googletrans import Translator
     translator = Translator()
