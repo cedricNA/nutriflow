@@ -2,7 +2,6 @@ import os
 import requests
 import pandas as pd
 import unicodedata
-import os
 from typing import List, Dict, Optional
 from fastapi import HTTPException
 from libretranslatepy import LibreTranslateAPI
@@ -88,13 +87,12 @@ def translate_fr_en(text_fr: str) -> str:
     url = os.getenv("NUTRIFLOW_LIBRETRANSLATE_URL", "https://libretranslate.de")
     translator = LibreTranslateAPI(url)
     try:
-        result = translator.translate(cleaned, source="fr", target="en")
-        print(
-            f"\N{CLOCKWISE OPEN CIRCLE ARROW} Traduction automatique : {cleaned} → {result}"
-        )
+        print(f"[TRAD] Texte avant : {cleaned}")
+        result = translator.translate(cleaned, "fr", "en")
+        print(f"[TRAD] Texte après : {result}")
         return result
     except Exception as e:
-        print(f"\N{CROSS MARK} Erreur traduction : {e}")
+        print(f"[TRAD][ERREUR] {e}")
         return text_fr
 
 
