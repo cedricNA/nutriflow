@@ -17,5 +17,5 @@ def test_translate_fr_en_basic(monkeypatch, capsys):
     result = services.translate_fr_en("1 avocat, 100g de ma\u00efs, 60g de tomate cerise")
     captured = capsys.readouterr()
     assert result == "1 avocado, 100g corn, 60g cherry tomato"
-    expected_log = "🔁 Texte envoyé à Nutritionix : 1 avocado, 100g corn, 60g cherry tomato → 1 avocado, 100g corn, 60g cherry tomato"
+    expected_log = "🔁 Texte envoyé à Nutritionix : 1 avocado, 100g of corn, 60g of cherry tomato → 1 avocado, 100g corn, 60g cherry tomato"
     assert expected_log in captured.out

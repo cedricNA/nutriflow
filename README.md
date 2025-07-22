@@ -224,4 +224,20 @@ Elle permet d’analyser, enregistrer et restituer :
 4. Consulte ton bilan avec `/api/daily-summary`.
 5. Explore l’historique avec `/api/history`.
 
+## Exemple de traduction avec mapping CSV
+
+```python
+from nutriflow.services import reload_mapping, translate_fr_en
+
+# Charge le fichier CSV fournissant les correspondances FR→EN
+reload_mapping("data/fr_en_mapping.csv")
+
+phrase = "2 cuillères à soupe de confiture de myrtille"
+resultat = translate_fr_en(phrase)
+print(resultat)
+```
+
+L'appel à Google Translate reçoit déjà :
+`2 tablespoons of blueberry jam`.
+
 Happy coding !
