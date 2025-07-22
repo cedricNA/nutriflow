@@ -15,7 +15,7 @@ from main import app
 from nutriflow.api import router
 from nutriflow.api.router import (
     IngredientQuery,
-    BarcodeQuery,
+    BarcodeQueryUserInput,
     ExerciseQuery,
     BMRQuery,
     TDEEQuery,
@@ -192,10 +192,11 @@ def test_ingredients_unit():
 
 
 def test_barcode_unit():
-    q = BarcodeQuery(barcode="12345678")
+    q = BarcodeQueryUserInput(barcode="12345678", quantity=50)
     resp = router.barcode(q)
     assert isinstance(resp, OFFProduct)
     assert resp.name == "TestProduct"
+    assert resp.energy_kcal_per_100g == 50
 
 
 def test_search_unit():
@@ -309,7 +310,10 @@ def test_barcode_integration_structure():
     async def inner():
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            res = await ac.post("/api/barcode", json={"barcode": "3274080005003"})
+            res = await ac.post(
+                "/api/barcode",
+                json={"barcode": "3274080005003", "quantity": 100},
+            )
             assert res.status_code in (200, 404)
             if res.status_code == 200:
                 data = res.json()
