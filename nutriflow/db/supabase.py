@@ -34,6 +34,7 @@ def insert_meal_item(
     glucides_g,
     lipides_g,
     barcode=None,
+    source=None,
 ):
     supabase = get_supabase_client()
     response = (
@@ -50,6 +51,7 @@ def insert_meal_item(
                 "glucides_g": glucides_g,
                 "lipides_g": lipides_g,
                 "barcode": barcode,
+                "source": source,
             }
         )
         .execute()

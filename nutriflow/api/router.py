@@ -33,6 +33,10 @@ class IngredientQuery(BaseModel):
     query: str = Field(
         ..., min_length=1, description="Description des ingrédients en français"
     )
+    type: str = Field(
+        "dejeuner",
+        description="Type de repas (petit_dejeuner, dejeuner, diner, collation)",
+    )
 
 
 class BarcodeQuery(BaseModel):
@@ -40,6 +44,10 @@ class BarcodeQuery(BaseModel):
         ...,
         pattern=r"^\d{8,}$",
         description="Code-barres du produit (au moins 8 chiffres)",
+    )
+    quantity: float = Field(100.0, gt=0, description="Quantité du produit (g)")
+    meal_id: Optional[str] = Field(
+        None, description="Identifiant du repas auquel ajouter l'article"
     )
 
 
@@ -171,7 +179,7 @@ def ingredients(data: IngredientQuery):
 
         # === AJOUT SAUVEGARDE DANS SUPABASE ===
         user_id = TEST_USER_ID  # ID générique en l'absence d'utilisateur connecté
-        meal_id = insert_meal(user_id, str(date.today()), "repas", note="")
+        meal_id = insert_meal(user_id, str(date.today()), data.type, note="")
         for food in foods:
             insert_meal_item(
                 meal_id=meal_id,
@@ -184,6 +192,7 @@ def ingredients(data: IngredientQuery):
                 glucides_g=food.glucides_g,
                 lipides_g=food.lipides_g,
                 barcode=None,
+                source="manual",
             )
         # === FIN SAUVEGARDE ===
 
@@ -201,6 +210,37 @@ def barcode(data: BarcodeQuery):
     prod = get_off_nutrition_by_barcode(data.barcode)
     if not prod:
         raise HTTPException(status_code=404, detail="Produit non trouvé")
+
+    # ===== Recherche/Création du repas =====
+    user_id = TEST_USER_ID
+    today = str(date.today())
+    meal_id = data.meal_id
+    if meal_id is None:
+        meals = db.get_meals(user_id, today)
+        if meals:
+            meal_id = meals[0]["id"]
+        else:
+            meal_id = insert_meal(user_id, today, "dejeuner", note="")
+
+    # ===== Insertion de l'aliment =====
+    qty = data.quantity
+    def _mul(val):
+        return (val or 0) * qty / 100.0
+
+    insert_meal_item(
+        meal_id=meal_id,
+        nom_aliment=prod["name"],
+        marque=prod.get("brand"),
+        quantite=qty,
+        unite="g",
+        calories=_mul(prod.get("energy_kcal_per_100g")),
+        proteines_g=_mul(prod.get("proteins_per_100g")),
+        glucides_g=_mul(prod.get("sugars_per_100g")),
+        lipides_g=_mul(prod.get("fat_per_100g")),
+        barcode=data.barcode,
+        source="barcode",
+    )
+
     return OFFProduct(**prod)
 
 
