@@ -2,9 +2,11 @@ import os
 import requests
 import pandas as pd
 import unicodedata
+import asyncio
+import inspect
 from typing import List, Dict, Optional
 from fastapi import HTTPException
-from libretranslatepy import LibreTranslateAPI
+from googletrans import Translator
 
 # Retrieve Nutritionix credentials from environment variables
 APP_ID = os.getenv("NUTRIFLOW_NUTRITIONIX_APP_ID")
@@ -77,22 +79,24 @@ def clean_text(text: str) -> str:
 
 
 def translate_fr_en(text_fr: str) -> str:
-    """Traduit du français vers l'anglais en utilisant LibreTranslate.
+    """Traduit du français vers l'anglais avec Google Translate.
 
     Nettoie d'abord le texte puis tente la traduction. En cas d'échec,
-    renvoie le texte original. L'URL du service peut être définie via la
-    variable d'environnement ``NUTRIFLOW_LIBRETRANSLATE_URL``.
+    renvoie le texte original.
     """
     cleaned = clean_text(text_fr)
-    url = os.getenv("NUTRIFLOW_LIBRETRANSLATE_URL", "https://libretranslate.de")
-    translator = LibreTranslateAPI(url)
+    translator = Translator()
     try:
-        print(f"[TRAD] Texte avant : {cleaned}")
-        result = translator.translate(cleaned, "fr", "en")
-        print(f"[TRAD] Texte après : {result}")
-        return result
+        if inspect.iscoroutinefunction(translator.translate):
+            result = asyncio.run(translator.translate(cleaned, src="fr", dest="en"))
+        else:
+            result = translator.translate(cleaned, src="fr", dest="en")
+        print(
+            f"\N{CLOCKWISE OPEN CIRCLE ARROW} Traduction automatique : {cleaned} → {result.text}"
+        )
+        return result.text
     except Exception as e:
-        print(f"[TRAD][ERREUR] {e}")
+        print(f"\N{CROSS MARK} Erreur traduction : {e}")
         return text_fr
 
 
