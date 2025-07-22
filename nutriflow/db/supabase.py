@@ -235,3 +235,78 @@ def update_user(user_id, data):
     if not response.data:
         raise Exception("Erreur lors de la mise à jour utilisateur")
     return response.data[0]
+
+
+def aggregate_daily_summary(user_id: str, date: str):
+    """Agrège et enregistre le bilan quotidien d'un utilisateur."""
+    supabase = get_supabase_client()
+
+    # 1. Totaux nutritionnels via la vue/jointure
+    totals = get_daily_nutrition(user_id, date)
+    total_calories = totals.get("total_calories", 0.0)
+    prot_tot = totals.get("total_proteins_g", 0.0)
+    gluc_tot = totals.get("total_carbs_g", 0.0)
+    lip_tot = totals.get("total_fats_g", 0.0)
+
+    # 2. Activités physiques
+    activities = get_activities(user_id, date)
+    calories_brulees = sum(a.get("calories_brulees", 0) for a in activities) if activities else 0.0
+
+    # 3. Profil utilisateur
+    user = get_user(user_id)
+    if not user:
+        raise Exception("Utilisateur non trouvé")
+
+    from nutriflow.services import calculer_bmr, calculer_tdee
+
+    bmr = calculer_bmr(user["poids_kg"], user["taille_cm"], user["age"], user["sexe"])
+    tdee = calculer_tdee(
+        user["poids_kg"], user["taille_cm"], user["age"], user["sexe"], calories_brulees
+    )
+
+    # 4. Balance calorique
+    balance = total_calories - tdee
+
+    # 5. Conseil personnalisé selon l'objectif
+    objectif = user.get("objectif", "maintien")
+    if objectif == "perte":
+        if balance < -300:
+            conseil = "Déficit important, perte de poids rapide possible."
+        elif balance < 0:
+            conseil = "Déficit modéré, bonne trajectoire pour perdre du poids."
+        elif balance < 150:
+            conseil = "Attention, vous êtes en léger surplus."
+        else:
+            conseil = "Surplus, risque de prise de poids."
+    elif objectif == "prise":
+        if balance > 300:
+            conseil = "Surplus optimal pour prise de masse."
+        elif balance > 0:
+            conseil = "Surplus léger, progression possible mais lente."
+        elif balance > -150:
+            conseil = "Attention, vous êtes presque à l\u2019\xe9quilibre."
+        else:
+            conseil = "Déficit, trop faible pour prise de masse."
+    else:  # maintien
+        if abs(balance) < 150:
+            conseil = "Maintien calorique atteint."
+        elif balance < 0:
+            conseil = "Léger déficit, surveillez si ce n\u2019est pas souhaité."
+        else:
+            conseil = "Léger surplus, surveillez si ce n\u2019est pas souhaité."
+
+    record = {
+        "user_id": user_id,
+        "date": date,
+        "calories_apportees": total_calories,
+        "calories_brulees": calories_brulees,
+        "prot_tot": prot_tot,
+        "gluc_tot": gluc_tot,
+        "lip_tot": lip_tot,
+        "tdee": tdee,
+        "balance_calorique": balance,
+        "conseil": conseil,
+    }
+
+    supabase.table("daily_summary").upsert(record).execute()
+    return record
