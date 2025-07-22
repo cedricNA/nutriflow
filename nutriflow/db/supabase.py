@@ -1,5 +1,6 @@
 import os
 from supabase import create_client, Client
+from postgrest.exceptions import APIError
 
 
 def get_supabase_client():
@@ -117,13 +118,45 @@ def get_activities(user_id, date):
 def get_daily_nutrition(user_id: str, date: str):
     """Récupère les totaux nutritionnels d'une journée via la vue SQL."""
     supabase = get_supabase_client()
-    result = (
-        supabase.table("daily_nutrition_totals")
-        .select("*")
-        .eq("user_id", user_id)
-        .eq("date", date)
-        .execute()
-    )
+    try:
+        result = (
+            supabase.table("daily_nutrition_totals")
+            .select("*")
+            .eq("user_id", user_id)
+            .eq("date", date)
+            .execute()
+        )
+    except APIError as e:
+        if getattr(e, "code", "") == "42P01":
+            meals_res = (
+                supabase.table("meals")
+                .select("id")
+                .eq("user_id", user_id)
+                .eq("date", date)
+                .execute()
+            )
+            meal_ids = [m["id"] for m in (meals_res.data or [])]
+            if not meal_ids:
+                return {
+                    "total_calories": 0.0,
+                    "total_proteins_g": 0.0,
+                    "total_carbs_g": 0.0,
+                    "total_fats_g": 0.0,
+                }
+            items_res = (
+                supabase.table("meal_items")
+                .select("calories,proteines_g,glucides_g,lipides_g")
+                .in_("meal_id", meal_ids)
+                .execute()
+            )
+            items = items_res.data or []
+            return {
+                "total_calories": sum(it.get("calories", 0) for it in items),
+                "total_proteins_g": sum(it.get("proteines_g", 0) for it in items),
+                "total_carbs_g": sum(it.get("glucides_g", 0) for it in items),
+                "total_fats_g": sum(it.get("lipides_g", 0) for it in items),
+            }
+        raise
     if not result.data:
         return {
             "total_calories": 0.0,
@@ -250,7 +283,9 @@ def aggregate_daily_summary(user_id: str, date: str):
 
     # 2. Activités physiques
     activities = get_activities(user_id, date)
-    calories_brulees = sum(a.get("calories_brulees", 0) for a in activities) if activities else 0.0
+    calories_brulees = (
+        sum(a.get("calories_brulees", 0) for a in activities) if activities else 0.0
+    )
 
     # 3. Profil utilisateur
     user = get_user(user_id)

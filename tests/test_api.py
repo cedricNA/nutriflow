@@ -508,3 +508,76 @@ def test_get_daily_nutrition_empty(monkeypatch):
         "total_carbs_g": 0.0,
         "total_fats_g": 0.0,
     }
+
+
+def test_get_daily_nutrition_fallback(monkeypatch):
+    user_id = "u1"
+    date_str = "2025-07-22"
+
+    meals_data = [{"id": "m1", "user_id": user_id, "date": date_str}]
+    items_data = [
+        {
+            "meal_id": "m1",
+            "calories": 200.0,
+            "proteines_g": 15.0,
+            "glucides_g": 20.0,
+            "lipides_g": 5.0,
+        },
+        {
+            "meal_id": "m1",
+            "calories": 100.0,
+            "proteines_g": 5.0,
+            "glucides_g": 10.0,
+            "lipides_g": 2.0,
+        },
+    ]
+
+    class DummyResult:
+        def __init__(self, data):
+            self.data = data
+
+    class DummyClient:
+        def __init__(self):
+            self.name = ""
+            self.filters = {}
+
+        def table(self, name):
+            self.name = name
+            self.filters = {}
+            return self
+
+        def select(self, *_):
+            return self
+
+        def eq(self, col, val):
+            self.filters[col] = val
+            return self
+
+        def in_(self, col, vals):
+            self.filters[col] = vals
+            return self
+
+        def execute(self):
+            from postgrest.exceptions import APIError
+
+            if self.name == "daily_nutrition_totals":
+                raise APIError({"message": "relation missing", "code": "42P01"})
+            if self.name == "meals":
+                uid = self.filters.get("user_id")
+                d = self.filters.get("date")
+                data = [m for m in meals_data if m["user_id"] == uid and m["date"] == d]
+                return DummyResult(data)
+            if self.name == "meal_items":
+                ids = self.filters.get("meal_id", [])
+                data = [it for it in items_data if it["meal_id"] in ids]
+                return DummyResult(data)
+            return DummyResult([])
+
+    monkeypatch.setattr(db, "get_supabase_client", lambda: DummyClient())
+    monkeypatch.setattr(db, "get_daily_nutrition", original_get_daily_nutrition)
+
+    totals = db.get_daily_nutrition(user_id, date_str)
+    assert totals["total_calories"] == 300.0
+    assert totals["total_proteins_g"] == 20.0
+    assert totals["total_carbs_g"] == 30.0
+    assert totals["total_fats_g"] == 7.0
