@@ -206,10 +206,11 @@ def translate_fr_en(text_fr: str) -> str:
     _ensure_mapping_loaded()
     texte = clean_text(text_fr).lower()
     # On applique d'abord le mapping issu du CSV
-    for fr, en in (_CSV_MAPPING or {}).items():
+    # On applique le mapping du CSV en remplaçant d'abord les clés les plus longues
+    for fr, en in sorted((_CSV_MAPPING or {}).items(), key=lambda item: len(item[0]), reverse=True):
         texte = texte.replace(fr, en)
-    # Puis le mapping manuel
-    for fr, en in MANUAL_CORRECTIONS.items():
+    # Puis le mapping manuel, également trié par taille
+    for fr, en in sorted(MANUAL_CORRECTIONS.items(), key=lambda item: len(item[0]), reverse=True):
         texte = texte.replace(fr, en)
     from googletrans import Translator
     translator = Translator()
