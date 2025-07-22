@@ -299,96 +299,19 @@ def tdee(data: TDEEQuery):
 def daily_summary(
     date_str: str = Query(default=None, description="Date au format YYYY-MM-DD")
 ):
-    """Calcule et/ou retourne le résumé de la journée (bilan nutritionnel) pour une date donnée."""
+    """Calcule ou met à jour le résumé quotidien pour la date donnée."""
     user_id = TEST_USER_ID
     today = str(date.today())
     d = date_str if date_str else today
 
-    # Vérifie si le résumé existe déjà
-    rec = db.get_daily_summary(user_id, d)
-    if rec:
-        return DailySummary(
-            date=rec["date"],
-            calories_apportees=rec.get("calories_apportees") or 0.0,
-            calories_brulees=rec.get("calories_brulees") or 0.0,
-            tdee=rec.get("tdee") or 0.0,
-            balance_calorique=rec.get("balance_calorique") or 0.0,
-            conseil=rec.get("conseil") or "",
-        )
-
-    # 1. Calcule les apports du jour via la vue daily_nutrition_totals
-    totals = db.get_daily_nutrition(user_id, d)
-    calories_apportees = totals.get("total_calories", 0.0)
-
-    # 2. Calcule les calories sportives
-    activities = db.get_activities(user_id, d)
-    calories_brulees = (
-        sum(act["calories_brulees"] for act in activities) if activities else 0.0
-    )
-
-    # 3. Profil utilisateur (exemple simple ici)
-    user = {
-        "poids_kg": 75,
-        "taille_cm": 175,
-        "age": 30,
-        "sexe": "homme",
-        "objectif": "maintien",
-    }
-
-    # 4. Calcul TDEE
-    bmr = calculer_bmr(user["poids_kg"], user["taille_cm"], user["age"], user["sexe"])
-    tdee = calculer_tdee(
-        user["poids_kg"], user["taille_cm"], user["age"], user["sexe"], calories_brulees
-    )
-
-    # 5. Balance et conseil personnalisé (mieux adapté selon l'objectif)
-    balance_calorique = calories_apportees - tdee
-
-    objectif = user.get("objectif", "maintien")
-    if objectif == "perte":
-        if balance_calorique < -300:
-            conseil = "Déficit important, perte de poids rapide possible."
-        elif balance_calorique < 0:
-            conseil = "Déficit modéré, bonne trajectoire pour perdre du poids."
-        elif balance_calorique < 150:
-            conseil = "Attention, vous êtes en léger surplus."
-        else:
-            conseil = "Surplus, risque de prise de poids."
-    elif objectif == "prise":
-        if balance_calorique > 300:
-            conseil = "Surplus optimal pour prise de masse."
-        elif balance_calorique > 0:
-            conseil = "Surplus léger, progression possible mais lente."
-        elif balance_calorique > -150:
-            conseil = "Attention, vous êtes presque à l’équilibre."
-        else:
-            conseil = "Déficit, trop faible pour prise de masse."
-    else:  # maintien
-        if abs(balance_calorique) < 150:
-            conseil = "Maintien calorique atteint."
-        elif balance_calorique < 0:
-            conseil = "Léger déficit, surveillez si ce n’est pas souhaité."
-        else:
-            conseil = "Léger surplus, surveillez si ce n’est pas souhaité."
-
-    # 6. Sauvegarde dans Supabase
-    db.insert_daily_summary(
-        user_id=user_id,
-        date=d,
-        tdee=tdee or 0.0,
-        calories_apportees=calories_apportees or 0.0,
-        calories_brulees=calories_brulees or 0.0,
-        balance_calorique=balance_calorique or 0.0,
-        conseil=conseil or "",
-    )
-
+    data = db.aggregate_daily_summary(user_id, d)
     return DailySummary(
         date=d,
-        calories_apportees=calories_apportees,
-        calories_brulees=calories_brulees,
-        tdee=tdee,
-        balance_calorique=balance_calorique,
-        conseil=conseil,
+        calories_apportees=data.get("calories_apportees", 0.0),
+        calories_brulees=data.get("calories_brulees", 0.0),
+        tdee=data.get("tdee", 0.0),
+        balance_calorique=data.get("balance_calorique", 0.0),
+        conseil=data.get("conseil", ""),
     )
 
 

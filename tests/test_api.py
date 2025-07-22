@@ -130,7 +130,7 @@ def mock_router(monkeypatch):
     )
     monkeypatch.setattr(
         db,
-        "get_daily_summary",
+        "aggregate_daily_summary",
         lambda *args, **kwargs: {
             "date": args[1] if len(args) > 1 else kwargs.get("date"),
             "calories_apportees": 2000.0,
@@ -138,6 +138,9 @@ def mock_router(monkeypatch):
             "tdee": 1800.0,
             "balance_calorique": 200.0,
             "conseil": "test",
+            "prot_tot": 0.0,
+            "gluc_tot": 0.0,
+            "lip_tot": 0.0,
         },
     )
     monkeypatch.setattr(
