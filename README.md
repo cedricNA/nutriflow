@@ -237,6 +237,10 @@ resultat = translate_fr_en(phrase)
 print(resultat)
 ```
 
+Format attendu du CSV :
+- deux colonnes nommées `fr` et `en`
+- séparateur `;` ou `,` accepté
+
 L'appel à Google Translate reçoit déjà :
 `2 tablespoons of blueberry jam`.
 

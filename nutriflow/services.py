@@ -78,8 +78,13 @@ DEFAULT_MAPPING_PATH = os.path.join(
 _CSV_MAPPING: Optional[Dict[str, str]] = None
 
 def load_mapping_csv(filepath: str) -> Dict[str, str]:
-    """Charge un CSV `fr,en` et retourne un dictionnaire {fr: en}."""
-    df = pd.read_csv(filepath)
+    """Charge un CSV "fr,en" ou "fr;en" et retourne un dictionnaire."""
+    # On détecte automatiquement le séparateur utilisé
+    with open(filepath, "r", encoding="utf-8-sig") as f:
+        first_line = f.readline()
+    delimiter = ";" if first_line.count(";") >= first_line.count(",") else ","
+
+    df = pd.read_csv(filepath, sep=delimiter)
     mapping = {}
     for _, row in df.iterrows():
         fr = clean_text(str(row["fr"]))
