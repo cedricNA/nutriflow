@@ -1,0 +1,260 @@
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Plus, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+interface Ingredient {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+interface AddMealModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export const AddMealModal = ({ open, onOpenChange }: AddMealModalProps) => {
+  const { toast } = useToast();
+  const [mealType, setMealType] = useState<string>("");
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [newIngredient, setNewIngredient] = useState({
+    name: "",
+    quantity: "",
+    unit: "g"
+  });
+
+  const units = ["g", "kg", "ml", "l", "unité(s)", "cuillère(s)", "verre(s)"];
+  const mealTypes = ["Petit-déjeuner", "Déjeuner", "Dîner", "Collation"];
+
+  const addIngredient = () => {
+    if (!newIngredient.name || !newIngredient.quantity) return;
+
+    // Simulation des valeurs nutritionnelles
+    const mockNutrition = {
+      calories: Math.round(Number(newIngredient.quantity) * 2.5),
+      protein: Math.round(Number(newIngredient.quantity) * 0.15),
+      carbs: Math.round(Number(newIngredient.quantity) * 0.4),
+      fat: Math.round(Number(newIngredient.quantity) * 0.1)
+    };
+
+    const ingredient: Ingredient = {
+      id: Date.now().toString(),
+      name: newIngredient.name,
+      quantity: Number(newIngredient.quantity),
+      unit: newIngredient.unit,
+      ...mockNutrition
+    };
+
+    setIngredients([...ingredients, ingredient]);
+    setNewIngredient({ name: "", quantity: "", unit: "g" });
+  };
+
+  const removeIngredient = (id: string) => {
+    setIngredients(ingredients.filter(ing => ing.id !== id));
+  };
+
+  const getTotalNutrition = () => {
+    return ingredients.reduce((total, ing) => ({
+      calories: total.calories + ing.calories,
+      protein: total.protein + ing.protein,
+      carbs: total.carbs + ing.carbs,
+      fat: total.fat + ing.fat
+    }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+  };
+
+  const handleSaveMeal = () => {
+    if (!mealType || ingredients.length === 0) {
+      toast({
+        title: "Informations manquantes",
+        description: "Veuillez sélectionner un type de repas et ajouter au moins un ingrédient.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const total = getTotalNutrition();
+    toast({
+      title: "Repas ajouté avec succès",
+      description: `${ingredients.length} ingrédient(s) - ${total.calories} kcal`,
+    });
+
+    // Reset form
+    setMealType("");
+    setIngredients([]);
+    setNewIngredient({ name: "", quantity: "", unit: "g" });
+    onOpenChange(false);
+  };
+
+  const total = getTotalNutrition();
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-semibold bg-gradient-primary bg-clip-text text-transparent">
+            Ajouter un repas
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          {/* Type de repas */}
+          <div className="space-y-2">
+            <Label htmlFor="meal-type">Type de repas</Label>
+            <Select value={mealType} onValueChange={setMealType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner un type de repas" />
+              </SelectTrigger>
+              <SelectContent>
+                {mealTypes.map((type) => (
+                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Ajouter un ingrédient */}
+          <Card className="shadow-soft">
+            <CardHeader>
+              <CardTitle className="text-lg">Ajouter un ingrédient</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-1">
+                  <Label htmlFor="ingredient-name">Nom de l'ingrédient</Label>
+                  <Input
+                    id="ingredient-name"
+                    value={newIngredient.name}
+                    onChange={(e) => setNewIngredient({ ...newIngredient, name: e.target.value })}
+                    placeholder="Ex: Pomme, Riz, Poulet..."
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="quantity">Quantité</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    value={newIngredient.quantity}
+                    onChange={(e) => setNewIngredient({ ...newIngredient, quantity: e.target.value })}
+                    placeholder="100"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="unit">Unité</Label>
+                  <Select 
+                    value={newIngredient.unit} 
+                    onValueChange={(value) => setNewIngredient({ ...newIngredient, unit: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {units.map((unit) => (
+                        <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button 
+                onClick={addIngredient}
+                className="w-full bg-gradient-wellness hover:shadow-medium transition-all duration-300"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter l'ingrédient
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Liste des ingrédients */}
+          {ingredients.length > 0 && (
+            <Card className="shadow-soft">
+              <CardHeader>
+                <CardTitle className="text-lg">Ingrédients du repas</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {ingredients.map((ingredient) => (
+                  <div key={ingredient.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="flex-1">
+                      <div className="font-medium">{ingredient.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {ingredient.quantity} {ingredient.unit} - {ingredient.calories} kcal
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeIngredient(ingredient.id)}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Résumé nutritionnel */}
+          {ingredients.length > 0 && (
+            <Card className="shadow-soft border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+              <CardHeader>
+                <CardTitle className="text-lg">Résumé nutritionnel</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-nutrition-calories">{total.calories}</div>
+                    <div className="text-sm text-muted-foreground">Calories</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-nutrition-protein">{total.protein}g</div>
+                    <div className="text-sm text-muted-foreground">Protéines</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-nutrition-carbs">{total.carbs}g</div>
+                    <div className="text-sm text-muted-foreground">Glucides</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-nutrition-fat">{total.fat}g</div>
+                    <div className="text-sm text-muted-foreground">Lipides</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <Separator />
+
+          {/* Actions */}
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => onOpenChange(false)}
+            >
+              Annuler
+            </Button>
+            <Button
+              className="flex-1 bg-gradient-primary hover:shadow-medium transition-all duration-300"
+              onClick={handleSaveMeal}
+            >
+              Valider le repas
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
