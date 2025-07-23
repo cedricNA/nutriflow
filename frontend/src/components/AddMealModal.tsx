@@ -8,16 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { analyzeIngredients, type Totals } from "@/services/api";
 
 interface Ingredient {
   id: string;
   name: string;
   quantity: number;
   unit: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
 }
 
 interface AddMealModalProps {
@@ -29,6 +26,7 @@ export const AddMealModal = ({ open, onOpenChange }: AddMealModalProps) => {
   const { toast } = useToast();
   const [mealType, setMealType] = useState<string>("");
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [totals, setTotals] = useState<Totals | null>(null);
   const [newIngredient, setNewIngredient] = useState({
     name: "",
     quantity: "",
@@ -41,40 +39,24 @@ export const AddMealModal = ({ open, onOpenChange }: AddMealModalProps) => {
   const addIngredient = () => {
     if (!newIngredient.name || !newIngredient.quantity) return;
 
-    // Simulation des valeurs nutritionnelles
-    const mockNutrition = {
-      calories: Math.round(Number(newIngredient.quantity) * 2.5),
-      protein: Math.round(Number(newIngredient.quantity) * 0.15),
-      carbs: Math.round(Number(newIngredient.quantity) * 0.4),
-      fat: Math.round(Number(newIngredient.quantity) * 0.1)
-    };
-
     const ingredient: Ingredient = {
       id: Date.now().toString(),
       name: newIngredient.name,
       quantity: Number(newIngredient.quantity),
-      unit: newIngredient.unit,
-      ...mockNutrition
+      unit: newIngredient.unit
     };
 
     setIngredients([...ingredients, ingredient]);
     setNewIngredient({ name: "", quantity: "", unit: "g" });
+    setTotals(null);
   };
 
   const removeIngredient = (id: string) => {
     setIngredients(ingredients.filter(ing => ing.id !== id));
+    setTotals(null);
   };
 
-  const getTotalNutrition = () => {
-    return ingredients.reduce((total, ing) => ({
-      calories: total.calories + ing.calories,
-      protein: total.protein + ing.protein,
-      carbs: total.carbs + ing.carbs,
-      fat: total.fat + ing.fat
-    }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
-  };
-
-  const handleSaveMeal = () => {
+  const handleSaveMeal = async () => {
     if (!mealType || ingredients.length === 0) {
       toast({
         title: "Informations manquantes",
@@ -83,21 +65,28 @@ export const AddMealModal = ({ open, onOpenChange }: AddMealModalProps) => {
       });
       return;
     }
+    const query = ingredients
+      .map((ing) => `${ing.quantity}${ing.unit} ${ing.name}`)
+      .join(", ");
 
-    const total = getTotalNutrition();
-    toast({
-      title: "Repas ajouté avec succès",
-      description: `${ingredients.length} ingrédient(s) - ${total.calories} kcal`,
-    });
-
-    // Reset form
-    setMealType("");
-    setIngredients([]);
-    setNewIngredient({ name: "", quantity: "", unit: "g" });
-    onOpenChange(false);
+    try {
+      const result = await analyzeIngredients(query, mealType);
+      setTotals(result.totals);
+      console.log("Résumé nutritionnel :", result.totals);
+      toast({
+        title: "Repas ajouté avec succès",
+        description: `${ingredients.length} ingrédient(s) enregistrés`,
+      });
+    } catch (err) {
+      console.error("Erreur lors de l'analyse :", err);
+      toast({
+        title: "Erreur lors de l'analyse",
+        description: String(err),
+        variant: "destructive",
+      });
+    }
   };
 
-  const total = getTotalNutrition();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -185,11 +174,14 @@ export const AddMealModal = ({ open, onOpenChange }: AddMealModalProps) => {
               </CardHeader>
               <CardContent className="space-y-3">
                 {ingredients.map((ingredient) => (
-                  <div key={ingredient.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div
+                    key={ingredient.id}
+                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                  >
                     <div className="flex-1">
                       <div className="font-medium">{ingredient.name}</div>
                       <div className="text-sm text-muted-foreground">
-                        {ingredient.quantity} {ingredient.unit} - {ingredient.calories} kcal
+                        {ingredient.quantity} {ingredient.unit}
                       </div>
                     </div>
                     <Button
@@ -207,7 +199,7 @@ export const AddMealModal = ({ open, onOpenChange }: AddMealModalProps) => {
           )}
 
           {/* Résumé nutritionnel */}
-          {ingredients.length > 0 && (
+          {totals && (
             <Card className="shadow-soft border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
               <CardHeader>
                 <CardTitle className="text-lg">Résumé nutritionnel</CardTitle>
@@ -215,19 +207,19 @@ export const AddMealModal = ({ open, onOpenChange }: AddMealModalProps) => {
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-nutrition-calories">{total.calories}</div>
+                    <div className="text-2xl font-bold text-nutrition-calories">{Math.round(totals.total_calories)}</div>
                     <div className="text-sm text-muted-foreground">Calories</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-nutrition-protein">{total.protein}g</div>
+                    <div className="text-2xl font-bold text-nutrition-protein">{Math.round(totals.total_proteins_g)}g</div>
                     <div className="text-sm text-muted-foreground">Protéines</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-nutrition-carbs">{total.carbs}g</div>
+                    <div className="text-2xl font-bold text-nutrition-carbs">{Math.round(totals.total_carbs_g)}g</div>
                     <div className="text-sm text-muted-foreground">Glucides</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-nutrition-fat">{total.fat}g</div>
+                    <div className="text-2xl font-bold text-nutrition-fat">{Math.round(totals.total_fats_g)}g</div>
                     <div className="text-sm text-muted-foreground">Lipides</div>
                   </div>
                 </div>
