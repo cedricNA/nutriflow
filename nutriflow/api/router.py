@@ -103,6 +103,36 @@ class UserProfileUpdate(BaseModel):
     sexe: Optional[str] = None
 
 
+# ----- Meal Editing Models -----
+class MealItemBase(BaseModel):
+    nom_aliment: Optional[str] = None
+    marque: Optional[str] = None
+    quantite: Optional[float] = None
+    unite: Optional[str] = None
+    calories: Optional[float] = None
+    proteines_g: Optional[float] = None
+    glucides_g: Optional[float] = None
+    lipides_g: Optional[float] = None
+    barcode: Optional[str] = None
+    source: Optional[str] = None
+
+
+class MealItemCreate(MealItemBase):
+    nom_aliment: str
+    quantite: float
+    unite: str
+
+
+class MealItemUpdate(MealItemBase):
+    id: str
+
+
+class MealPatchPayload(BaseModel):
+    add: Optional[List[MealItemCreate]] = None
+    update: Optional[List[MealItemUpdate]] = None
+    delete: Optional[List[str]] = None
+
+
 # ----- Response Models -----
 class NutritionixFood(BaseModel):
     aliment: str
@@ -442,3 +472,50 @@ def update_user_profile(data: UserProfileUpdate, user_id: str = TEST_USER_ID):
         age=user["age"],
         sexe=user["sexe"],
     )
+
+
+# ----- Meals Management -----
+
+@router.get("/meals")
+def list_meals(
+    user_id: str = TEST_USER_ID,
+    date_str: str = Query(default=str(date.today()), description="Date YYYY-MM-DD"),
+):
+    """Liste les repas d'un utilisateur pour une date donnée avec leurs ingrédients."""
+    meals = db.get_meals(user_id, date_str)
+    result = []
+    for m in meals:
+        items = db.get_meal_items(m["id"])
+        result.append({"id": m["id"], "type": m.get("type"), "ingredients": items})
+    return result
+
+
+@router.patch("/meals/{meal_id}")
+def edit_meal(meal_id: str, payload: MealPatchPayload):
+    """Ajoute, met à jour ou supprime des ingrédients d'un repas."""
+    if payload.add:
+        for item in payload.add:
+            db.insert_meal_item(meal_id=meal_id, **item.dict())
+    if payload.update:
+        for item in payload.update:
+            data = item.dict(exclude={"id"}, exclude_none=True)
+            if data:
+                db.update_meal_item(item.id, data)
+    if payload.delete:
+        for item_id in payload.delete:
+            db.delete_meal_item(item_id)
+    return {"id": meal_id, "ingredients": db.get_meal_items(meal_id)}
+
+
+@router.delete("/meals/{meal_id}")
+def remove_meal(meal_id: str):
+    """Supprime un repas et ses ingrédients."""
+    db.delete_meal(meal_id)
+    return {"status": "deleted"}
+
+
+@router.delete("/meal-items/{item_id}")
+def remove_meal_item(item_id: str):
+    """Supprime un ingrédient d'un repas."""
+    db.delete_meal_item(item_id)
+    return {"status": "deleted"}
