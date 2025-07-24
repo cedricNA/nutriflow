@@ -142,6 +142,19 @@ def delete_meal(meal_id):
     supabase.table("meals").delete().eq("id", meal_id).execute()
 
 
+def get_activity(activity_id):
+    """Récupère une activité par son identifiant."""
+    supabase = get_supabase_client()
+    response = supabase.table("activities").select("*").eq("id", activity_id).execute()
+    return response.data[0] if response.data else None
+
+
+def delete_activity(activity_id):
+    """Supprime une activité."""
+    supabase = get_supabase_client()
+    supabase.table("activities").delete().eq("id", activity_id).execute()
+
+
 def get_activities(user_id, date):
     """Récupère les activités sportives pour un utilisateur et une date."""
     supabase = get_supabase_client()
