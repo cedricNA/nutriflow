@@ -13,56 +13,73 @@ API_KEY = os.getenv("NUTRIFLOW_NUTRITIONIX_API_KEY")
 
 # Mapping manuel des activités sportives FR ➔ EN
 SPORTS_MAPPING: Dict[str, str] = {
-    "natation": "swimming",
-    "Course à pied": "running",
+    # Activités d'endurance
+    "course à pied": "running",
+    "course a pied": "running",
+    "jogging": "running",
+    "footing": "running",
+    "course": "running",
+    "marathon": "marathon running",
+    "trail": "trail running",
+    "marche rapide": "brisk walking",
     "marche": "walking",
     "vélo": "cycling",
+    "velo": "cycling",
     "cyclisme": "cycling",
+    "vtt": "mountain biking",
+    "vélo d'appartement": "stationary bike",
+    "velo d'appartement": "stationary bike",
+    "vélo elliptique": "elliptical trainer",
+    "velo elliptique": "elliptical trainer",
+    "natation": "swimming",
+    # Renforcement musculaire et fitness
     "musculation": "weight lifting",
+    "haltérophilie": "weight lifting",
+    "muscu": "weight lifting",
     "fitness": "fitness",
+    "cross-training": "cross training",
+    "crossfit": "crossfit",
+    "pilates": "pilates",
     "yoga": "yoga",
+    "step": "step aerobics",
+    "stretching": "stretching",
+    # Sports de combat et arts martiaux
+    "boxe thai": "muay thai",
     "boxe": "boxing",
-    "danse": "dancing",
-    "elliptique": "elliptical trainer",
-    "tapis de course": "treadmill",
-    "escalade": "climbing",
-    "ski": "skiing",
-    "snowboard": "snowboarding",
-    "basket": "basketball",
-    "basket-ball": "basketball",
+    "judo": "judo",
+    "karaté": "karate",
+    "arts martiaux": "martial arts",
+    # Sports collectifs et de raquette
     "football": "soccer",
     "foot": "soccer",
+    "basket": "basketball",
+    "basket-ball": "basketball",
+    "handball": "handball",
+    "rugby": "rugby",
     "tennis": "tennis",
     "badminton": "badminton",
     "ping pong": "table tennis",
     "tennis de table": "table tennis",
     "volley": "volleyball",
     "volley-ball": "volleyball",
-    "rugby": "rugby",
-    "handball": "handball",
-    "crossfit": "crossfit",
-    "pilates": "pilates",
-    "step": "step aerobics",
+    # Autres activités
+    "elliptique": "elliptical trainer",
+    "tapis de course": "treadmill",
+    "escalade": "climbing",
+    "ski": "skiing",
+    "snowboard": "snowboarding",
     "aviron": "rowing",
     "rameur": "rowing",
     "randonnée": "hiking",
-    "marathon": "marathon running",
     "triathlon": "triathlon",
-    "trail": "trail running",
-    "boxe thai": "muay thai",
-    "judo": "judo",
-    "karaté": "karate",
-    "arts martiaux": "martial arts",
     "plongée": "diving",
     "rollers": "rollerblading",
     "patinage": "ice skating",
     "golf": "golf",
     "escrime": "fencing",
     "skate": "skateboarding",
-    "cross-training": "cross training",
     "corde à sauter": "jump rope",
     "jump rope": "jump rope",
-    "stretching": "stretching",
     "surf": "surfing",
     "cheval": "horse riding",
     "équitation": "horse riding",
@@ -101,6 +118,7 @@ UNIT_EN: set = {
     "ball",
 }
 
+
 def load_mapping_csv(filepath: str) -> Dict[str, str]:
     """Charge un CSV "fr,en" ou "fr;en" et retourne un dictionnaire."""
     # On détecte automatiquement le séparateur utilisé
@@ -115,6 +133,7 @@ def load_mapping_csv(filepath: str) -> Dict[str, str]:
         mapping[fr.lower().strip()] = str(row["en"]).strip()
     return mapping
 
+
 def _ensure_mapping_loaded() -> None:
     """Charge le mapping CSV par défaut au premier appel."""
     global _CSV_MAPPING
@@ -126,6 +145,7 @@ def _ensure_mapping_loaded() -> None:
                 _CSV_MAPPING = {}
         else:
             _CSV_MAPPING = {}
+
 
 def reload_mapping(filepath: Optional[str] = None) -> None:
     """Recharge le mapping depuis ``filepath`` ou le chemin par défaut."""
@@ -159,6 +179,7 @@ def normalize_units_text(text: str) -> str:
     for fr, en in sorted(mapping.items(), key=lambda i: len(i[0]), reverse=True):
         text = text.replace(fr, en)
     return text
+
 
 def clean_text(text: str) -> str:
     """
@@ -247,20 +268,26 @@ MANUAL_CORRECTIONS: Dict[str, str] = {
     # ... complète au fil des tests
 }
 
+
 def translate_fr_en(text_fr: str) -> str:
     _ensure_mapping_loaded()
     texte = clean_text(text_fr).lower()
     # On applique d'abord le mapping issu du CSV
     # On applique le mapping du CSV en remplaçant d'abord les clés les plus longues
-    for fr, en in sorted((_CSV_MAPPING or {}).items(), key=lambda item: len(item[0]), reverse=True):
+    for fr, en in sorted(
+        (_CSV_MAPPING or {}).items(), key=lambda item: len(item[0]), reverse=True
+    ):
         texte = texte.replace(fr, en)
     # Puis le mapping manuel, également trié par taille
-    for fr, en in sorted(MANUAL_CORRECTIONS.items(), key=lambda item: len(item[0]), reverse=True):
+    for fr, en in sorted(
+        MANUAL_CORRECTIONS.items(), key=lambda item: len(item[0]), reverse=True
+    ):
         texte = texte.replace(fr, en)
     from googletrans import Translator
+
     translator = Translator()
     try:
-        result = translator.translate(texte, src='fr', dest='en')
+        result = translator.translate(texte, src="fr", dest="en")
         print(f"🔁 Texte envoyé à Nutritionix : {texte} → {result.text}")
         return result.text
     except Exception as e:
@@ -275,9 +302,21 @@ def translate_activity_fr_en(text_fr: str) -> str:
     traduction pour le reste.
     """
     texte = text_fr.lower()
-    for fr, en in SPORTS_MAPPING.items():
+    # On remplace d'abord les termes français par leurs équivalents anglais
+    # en triant les clés par longueur pour éviter les collisions
+    for fr in sorted(SPORTS_MAPPING.keys(), key=len, reverse=True):
+        en = SPORTS_MAPPING[fr]
         if fr in texte:
             texte = texte.replace(fr, en)
+
+    # Nettoyage simple des "de", "du", "d'" qui précèdent souvent l'activité
+    texte = (
+        texte.replace(" d'", " ")
+        .replace(" de ", " ")
+        .replace(" du ", " ")
+        .replace(" des ", " ")
+    )
+
     # On passe le texte obtenu à la fonction générique de traduction
     return translate_fr_en(texte)
 
@@ -288,7 +327,7 @@ def get_off_search_nutrition(query: str) -> Optional[Dict]:
     Retourne un dict ou None.
     """
     url = "https://world.openfoodfacts.org/cgi/search.pl"
-    params = {"search_terms": query,"search_simple": 1,"action": "process","json": 1}
+    params = {"search_terms": query, "search_simple": 1, "action": "process", "json": 1}
     data = requests.get(url, params=params).json()
     if data.get("products"):
         p = data["products"][0]
@@ -334,7 +373,11 @@ def analyze_ingredients_nutritionix(text_fr: str) -> List[Dict]:
     query = translate_fr_en(text_fr)
     print(f"\N{CLOCKWISE OPEN CIRCLE ARROW} Requête envoyée à Nutritionix : {query}")
     url = "https://trackapi.nutritionix.com/v2/natural/nutrients"
-    headers = {"x-app-id": APP_ID, "x-app-key": API_KEY, "Content-Type": "application/json"}
+    headers = {
+        "x-app-id": APP_ID,
+        "x-app-key": API_KEY,
+        "Content-Type": "application/json",
+    }
     resp = requests.post(url, headers=headers, json={"query": query})
     resp.raise_for_status()
     return resp.json().get("foods", [])
@@ -346,15 +389,17 @@ def convert_nutritionix_to_df(foods: List[Dict]) -> pd.DataFrame:
     """
     rows = []
     for f in foods:
-        rows.append({
-            "Aliment": f.get("food_name", ""),
-            "Quantite": f"{f.get('serving_qty', 0)} {f.get('serving_unit','')}",
-            "Poids_g": f.get("serving_weight_grams", 0),
-            "Calories": f.get("nf_calories", 0),
-            "Proteines_g": f.get("nf_protein", 0),
-            "Glucides_g": f.get("nf_total_carbohydrate", 0),
-            "Lipides_g": f.get("nf_total_fat", 0)
-        })
+        rows.append(
+            {
+                "Aliment": f.get("food_name", ""),
+                "Quantite": f"{f.get('serving_qty', 0)} {f.get('serving_unit','')}",
+                "Poids_g": f.get("serving_weight_grams", 0),
+                "Calories": f.get("nf_calories", 0),
+                "Proteines_g": f.get("nf_protein", 0),
+                "Glucides_g": f.get("nf_total_carbohydrate", 0),
+                "Lipides_g": f.get("nf_total_fat", 0),
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -379,14 +424,28 @@ def analyze_exercise_nutritionix(
     query = translate_activity_fr_en(text_fr)
     print(f"🔁 Requête envoyée à Nutritionix : {query}")
     url = "https://trackapi.nutritionix.com/v2/natural/exercise"
-    headers = {"x-app-id": APP_ID, "x-app-key": API_KEY, "Content-Type": "application/json"}
-    body = {"query": query, "gender": gender, "weight_kg": weight_kg, "height_cm": height_cm, "age": age}
+    headers = {
+        "x-app-id": APP_ID,
+        "x-app-key": API_KEY,
+        "Content-Type": "application/json",
+    }
+    body = {
+        "query": query,
+        "gender": gender,
+        "weight_kg": weight_kg,
+        "height_cm": height_cm,
+        "age": age,
+    }
     resp = requests.post(url, headers=headers, json=body)
     if resp.status_code != 200:
-        raise HTTPException(status_code=resp.status_code, detail="Erreur Nutritionix Exercise")
+        raise HTTPException(
+            status_code=resp.status_code, detail="Erreur Nutritionix Exercise"
+        )
     return resp.json().get("exercises", [])
 
+
 # ---- Nouvelle fonction TDEE ----
+
 
 def calculer_bmr(poids_kg: float, taille_cm: float, age: int, sexe: str) -> float:
     """
@@ -402,11 +461,7 @@ def calculer_bmr(poids_kg: float, taille_cm: float, age: int, sexe: str) -> floa
 
 
 def calculer_tdee(
-    poids_kg: float,
-    taille_cm: float,
-    age: int,
-    sexe: str,
-    calories_sport: float = 0.0
+    poids_kg: float, taille_cm: float, age: int, sexe: str, calories_sport: float = 0.0
 ) -> float:
     """
     Calcule le TDEE = BMR + calories_sportives.
