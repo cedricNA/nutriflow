@@ -315,6 +315,15 @@ def get_user(user_id):
     return response.data[0] if response.data else None
 
 
+def get_product(barcode: str):
+    """Récupère un produit depuis la table `products` via son code-barres."""
+    supabase = get_supabase_client()
+    response = (
+        supabase.table("products").select("*").eq("barcode", barcode).execute()
+    )
+    return response.data[0] if response.data else None
+
+
 def update_user(user_id, data):
     supabase = get_supabase_client()
     response = supabase.table("users").update(data).eq("id", user_id).execute()

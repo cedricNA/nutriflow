@@ -236,3 +236,46 @@ export async function fetchSports(): Promise<string[]> {
   }
   return (await res.json()) as string[];
 }
+
+export interface ProductSummary {
+  barcode: string;
+  name: string;
+  image_url?: string;
+  brand?: string;
+  energy_kcal_per_100g?: number;
+  proteins_per_100g?: number;
+  carbs_per_100g?: number;
+  fat_per_100g?: number;
+  nutriscore?: string;
+}
+
+export interface ProductDetails extends ProductSummary {
+  labels?: string;
+  ingredients?: string;
+  additives?: string;
+  traces?: string;
+  countries?: string;
+  nova_score?: number;
+}
+
+export async function fetchProductSummary(barcode: string): Promise<ProductSummary> {
+  const res = await fetch('http://localhost:8000/api/barcode', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ barcode, quantity: 100 })
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Erreur API ${res.status}: ${text}`);
+  }
+  return (await res.json()) as ProductSummary;
+}
+
+export async function fetchProductDetails(barcode: string): Promise<ProductDetails> {
+  const res = await fetch(`http://localhost:8000/api/products/${barcode}/details`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Erreur API ${res.status}: ${text}`);
+  }
+  return (await res.json()) as ProductDetails;
+}

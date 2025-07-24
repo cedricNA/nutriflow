@@ -181,6 +181,18 @@ class NutritionixResponse(BaseModel):
     totals: Totals
 
 
+class ProductSummary(BaseModel):
+    barcode: str
+    name: str
+    image_url: Optional[str] = None
+    brand: Optional[str] = None
+    energy_kcal_per_100g: Optional[float] = None
+    proteins_per_100g: Optional[float] = None
+    carbs_per_100g: Optional[float] = None
+    fat_per_100g: Optional[float] = None
+    nutriscore: Optional[str] = None
+
+
 class OFFProduct(BaseModel):
     name: str
     brand: str
@@ -276,7 +288,7 @@ def ingredients(data: IngredientQuery):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/barcode", response_model=OFFProduct)
+@router.post("/barcode", response_model=ProductSummary)
 def barcode(data: BarcodeQueryUserInput):
     """
     Récupère les infos nutritionnelles d'un produit via OpenFoodFacts.
@@ -307,21 +319,22 @@ def barcode(data: BarcodeQueryUserInput):
         unite="g",
         calories=_mul(prod.get("energy_kcal_per_100g")),
         proteines_g=_mul(prod.get("proteins_per_100g")),
-        glucides_g=_mul(prod.get("sugars_per_100g")),
+        glucides_g=_mul(prod.get("carbs_per_100g")),
         lipides_g=_mul(prod.get("fat_per_100g")),
         barcode=data.barcode,
         source="openfoodfacts",
     )
 
-    return OFFProduct(
-        name=prod.get("name", ""),
-        brand=prod.get("brand", ""),
-        energy_kcal_per_100g=_mul(prod.get("energy_kcal_per_100g")),
-        fat_per_100g=_mul(prod.get("fat_per_100g")),
-        sugars_per_100g=_mul(prod.get("sugars_per_100g")),
-        proteins_per_100g=_mul(prod.get("proteins_per_100g")),
-        salt_per_100g=_mul(prod.get("salt_per_100g")),
-    )
+    return ProductSummary(**prod)
+
+
+@router.get("/products/{barcode}/details")
+def product_details(barcode: str):
+    """Retourne toutes les infos enrichies depuis Supabase."""
+    prod = db.get_product(barcode)
+    if not prod:
+        raise HTTPException(status_code=404, detail="Produit non trouvé")
+    return prod
 
 
 @router.get("/search", response_model=OFFProduct)
