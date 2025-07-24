@@ -5,7 +5,12 @@ import unicodedata
 from typing import List, Dict, Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
-from nutriflow.db.supabase import insert_meal, insert_meal_item, insert_activity
+from nutriflow.db.supabase import (
+    insert_meal,
+    insert_meal_item,
+    insert_activity,
+    get_meal,
+)
 import nutriflow.db.supabase as db
 
 # ID utilisateur générique pour les tests/démo (doit être un UUID valide)
@@ -28,6 +33,24 @@ from nutriflow.services import (
 )
 
 router = APIRouter()
+
+
+def _analyze_item(name: str, qty: float, unit: str) -> Dict[str, float]:
+    """Analyse un ingrédient via Nutritionix et retourne les infos utiles."""
+    query = normalize_units_text(f"{qty} {unit} {name}")
+    foods = analyze_ingredients_nutritionix(query)
+    if not foods:
+        raise HTTPException(status_code=400, detail="Analyse Nutritionix vide")
+    food = foods[0]
+    return {
+        "nom_aliment": food.get("food_name"),
+        "quantite": food.get("serving_weight_grams", qty),
+        "unite": "g",
+        "calories": food.get("nf_calories", 0),
+        "proteines_g": food.get("nf_protein", 0),
+        "glucides_g": food.get("nf_total_carbohydrate", 0),
+        "lipides_g": food.get("nf_total_fat", 0),
+    }
 
 
 # ----- Services Query Models -----
@@ -504,16 +527,25 @@ def edit_meal(meal_id: str, payload: MealPatchPayload):
         db.update_meal(meal_id, meal_data)
     if payload.add:
         for item in payload.add:
-            db.insert_meal_item(meal_id=meal_id, **item.dict())
+            analysed = _analyze_item(item.nom_aliment, item.quantite, item.unite)
+            db.insert_meal_item(
+                meal_id=meal_id,
+                source="manual",
+                **analysed,
+            )
     if payload.update:
         for item in payload.update:
-            data = item.dict(exclude={"id"}, exclude_none=True)
-            if data:
-                db.update_meal_item(item.id, data)
+            analysed = _analyze_item(item.nom_aliment, item.quantite, item.unite)
+            db.update_meal_item(item.id, {**analysed})
     if payload.delete:
         for item_id in payload.delete:
             db.delete_meal_item(item_id)
-    return {"id": meal_id, "ingredients": db.get_meal_items(meal_id)}
+    meal = get_meal(meal_id) or {"id": meal_id}
+    return {
+        "id": meal_id,
+        "type": meal.get("type"),
+        "ingredients": db.get_meal_items(meal_id),
+    }
 
 
 @router.delete("/meals/{meal_id}")

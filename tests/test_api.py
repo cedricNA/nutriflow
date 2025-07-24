@@ -643,8 +643,88 @@ def test_edit_meal_update_type(monkeypatch):
         record.update(data)
 
     monkeypatch.setattr(db, "update_meal", fake_update)
+    monkeypatch.setattr(router, "get_meal", lambda *a, **k: {"id": "meal123", "type": "diner"})
+    monkeypatch.setattr(db, "get_meal", lambda *a, **k: {"id": "meal123", "type": "diner"})
+    monkeypatch.setattr(db, "get_meal_items", lambda *a, **k: [])
     payload = router.MealPatchPayload(type="diner")
     resp = router.edit_meal("meal123", payload)
     assert record["meal_id"] == "meal123"
     assert record["type"] == "diner"
     assert resp["id"] == "meal123"
+
+
+def test_edit_meal_add_item_calls_analysis(monkeypatch):
+    queries = {}
+
+    def fake_analyze(q):
+        queries["query"] = q
+        return [
+            {
+                "food_name": "bread",
+                "serving_weight_grams": 50,
+                "nf_calories": 120,
+                "nf_protein": 4,
+                "nf_total_carbohydrate": 20,
+                "nf_total_fat": 2,
+            }
+        ]
+
+    inserted = {}
+
+    def fake_insert_meal_item(*_, **data):
+        inserted.update(data)
+        return "it"
+
+    monkeypatch.setattr(router, "analyze_ingredients_nutritionix", fake_analyze)
+    monkeypatch.setattr(db, "insert_meal_item", fake_insert_meal_item)
+    monkeypatch.setattr(db, "update_meal", lambda *a, **k: None)
+    monkeypatch.setattr(db, "get_meal_items", lambda *_: [inserted])
+    monkeypatch.setattr(router, "get_meal", lambda *_: {"id": "m", "type": "d"})
+    monkeypatch.setattr(db, "get_meal", lambda *_: {"id": "m", "type": "d"})
+
+    payload = router.MealPatchPayload(
+        add=[router.MealItemCreate(nom_aliment="bread", quantite=2, unite="slice")]
+    )
+    resp = router.edit_meal("m", payload)
+    assert queries["query"] == "2.0 slice bread"
+    assert inserted["calories"] == 120
+    assert resp["ingredients"][0]["calories"] == 120
+
+
+def test_edit_meal_update_item_calls_analysis(monkeypatch):
+    queries = {}
+
+    def fake_analyze(q):
+        queries["query"] = q
+        return [
+            {
+                "food_name": "apple",
+                "serving_weight_grams": 100,
+                "nf_calories": 60,
+                "nf_protein": 0.5,
+                "nf_total_carbohydrate": 15,
+                "nf_total_fat": 0.2,
+            }
+        ]
+
+    updated = {}
+
+    def fake_update_meal_item(id, data):
+        updated.update(data)
+        updated["id"] = id
+
+    monkeypatch.setattr(router, "analyze_ingredients_nutritionix", fake_analyze)
+    monkeypatch.setattr(db, "update_meal_item", fake_update_meal_item)
+    monkeypatch.setattr(db, "update_meal", lambda *a, **k: None)
+    monkeypatch.setattr(db, "get_meal_items", lambda *_: [updated])
+    monkeypatch.setattr(router, "get_meal", lambda *_: {"id": "m", "type": "d"})
+    monkeypatch.setattr(db, "get_meal", lambda *_: {"id": "m", "type": "d"})
+
+    item = router.MealItemUpdate(
+        id="i1", nom_aliment="pomme", quantite=1, unite="piece"
+    )
+    payload = router.MealPatchPayload(update=[item])
+    resp = router.edit_meal("m", payload)
+    assert queries["query"] == "1.0 piece pomme"
+    assert updated["calories"] == 60
+    assert resp["ingredients"][0]["id"] == "i1"
