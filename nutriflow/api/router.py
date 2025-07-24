@@ -560,3 +560,14 @@ def remove_meal_item(item_id: str):
     """Supprime un ingrédient d'un repas."""
     db.delete_meal_item(item_id)
     return {"status": "deleted"}
+
+
+# ----- Activities Management -----
+
+@router.get("/activities")
+def list_activities(
+    date: str = Query(default=str(date.today()), description="Date YYYY-MM-DD"),
+    user_id: str = TEST_USER_ID,
+):
+    """Retourne les activités sportives de l'utilisateur pour la date donnée."""
+    return db.get_activities(user_id, date)
