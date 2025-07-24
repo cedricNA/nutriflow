@@ -184,3 +184,30 @@ export async function deleteActivity(activityId: string): Promise<void> {
     throw new Error(`Erreur API ${res.status}: ${text}`);
   }
 }
+
+export interface DailySummary {
+  date: string;
+  calories_apportees: number;
+  calories_brulees: number;
+  tdee: number;
+  balance_calorique: number;
+  conseil: string;
+}
+
+export async function fetchDailySummary(date: string): Promise<DailySummary> {
+  const res = await fetch(`http://localhost:8000/api/daily-summary?date=${date}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Erreur API ${res.status}: ${text}`);
+  }
+  return (await res.json()) as DailySummary;
+}
+
+export async function fetchSports(): Promise<string[]> {
+  const res = await fetch('http://localhost:8000/api/sports');
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Erreur API ${res.status}: ${text}`);
+  }
+  return (await res.json()) as string[];
+}

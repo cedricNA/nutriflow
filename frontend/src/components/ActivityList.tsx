@@ -8,7 +8,9 @@ import { useToast } from "@/hooks/use-toast";
 import {
   fetchActivities,
   deleteActivity,
+  fetchDailySummary,
   type Activity,
+  type DailySummary,
 } from "@/services/api";
 import { AddActivityModal } from "./AddActivityModal";
 
@@ -18,11 +20,16 @@ export const ActivityList = () => {
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [editing, setEditing] = useState<Activity | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [summary, setSummary] = useState<DailySummary | null>(null);
 
   const loadActivities = async () => {
     try {
+      setLoading(true);
       const data = await fetchActivities(selectedDate);
       setActivities(data);
+      const sum = await fetchDailySummary(selectedDate);
+      setSummary(sum);
     } catch (err) {
       console.error(err);
       toast({
@@ -30,6 +37,8 @@ export const ActivityList = () => {
         description: String(err),
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -40,12 +49,15 @@ export const ActivityList = () => {
   const handleDelete = async (id: string) => {
     if (!confirm("Supprimer cette activité ?")) return;
     try {
+      setLoading(true);
       await deleteActivity(id);
       toast({ title: "Activité supprimée" });
-      loadActivities();
+      await loadActivities();
     } catch (err) {
       console.error(err);
       toast({ title: "Erreur", description: String(err), variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -68,6 +80,7 @@ export const ActivityList = () => {
         />
         <Button onClick={loadActivities}>Afficher</Button>
       </div>
+      {loading && <p>Chargement...</p>}
       {activities.map((act) => (
         <Card key={act.id} className="shadow-soft">
           <CardHeader className="flex flex-row justify-between items-center">
@@ -92,7 +105,14 @@ export const ActivityList = () => {
           </CardContent>
         </Card>
       ))}
-      {activities.length === 0 && <p>Aucune activité pour cette date.</p>}
+      {activities.length === 0 && !loading && (
+        <p>Aucune activité pour cette date.</p>
+      )}
+      {summary && (
+        <div className="text-sm text-muted-foreground">
+          Total : {Math.round(summary.calories_brulees)} kcal brûlées
+        </div>
+      )}
       <Separator />
     </div>
   );

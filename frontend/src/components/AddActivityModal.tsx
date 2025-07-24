@@ -8,7 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Dumbbell, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { analyzeExercise, updateActivity, type Activity } from "@/services/api";
+import {
+  analyzeExercise,
+  updateActivity,
+  fetchSports,
+  type Activity,
+} from "@/services/api";
 
 interface AddActivityModalProps {
   open: boolean;
@@ -42,6 +47,11 @@ export const AddActivityModal = ({ open, onOpenChange, activity, onSaved }: AddA
     { value: "intense", label: "Intense", multiplier: 1.3 }
   ];
 
+  const [sports, setSports] = useState<string[]>(
+    predefinedActivities.map((a) => a.name)
+  );
+  const [saving, setSaving] = useState(false);
+
   const [estimatedCalories, setEstimatedCalories] = useState<number | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
 
@@ -57,6 +67,13 @@ export const AddActivityModal = ({ open, onOpenChange, activity, onSaved }: AddA
       setIntensity("moderate");
     }
   }, [activity, isEdit, open]);
+
+  useEffect(() => {
+    fetchSports()
+      .then((list) => setSports(Array.from(new Set([...sports, ...list]))))
+      .catch((err) => console.error("Erreur chargement sports", err));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const fetchPreview = async () => {
@@ -100,6 +117,7 @@ export const AddActivityModal = ({ open, onOpenChange, activity, onSaved }: AddA
     }
 
     try {
+      setSaving(true);
       const data = await analyzeExercise(`${duration} minutes de ${finalActivity}`);
       const base = data[0]?.calories ?? 0;
       const intensityMultiplier =
@@ -120,7 +138,20 @@ export const AddActivityModal = ({ open, onOpenChange, activity, onSaved }: AddA
           title: "Activité ajoutée avec succès",
           description: `${finalActivity} - ${duration} min - ${caloriesBurned} kcal brûlées`,
         });
+        onSaved?.();
       }
+
+      const rec = localStorage.getItem("recentActivities");
+      let map: Record<string, { duration: string; intensity: string }> = {};
+      if (rec) {
+        try {
+          map = JSON.parse(rec);
+        } catch (err) {
+          console.error("Bad recentActivities", err);
+        }
+      }
+      map[finalActivity] = { duration, intensity };
+      localStorage.setItem("recentActivities", JSON.stringify(map));
 
       setActivityType("");
       setCustomActivity("");
@@ -134,6 +165,8 @@ export const AddActivityModal = ({ open, onOpenChange, activity, onSaved }: AddA
         description: String(err),
         variant: "destructive",
       });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -155,12 +188,27 @@ export const AddActivityModal = ({ open, onOpenChange, activity, onSaved }: AddA
               list="activities"
               id="activity-type"
               value={activityType}
-              onChange={(e) => setActivityType(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setActivityType(val);
+                const rec = localStorage.getItem("recentActivities");
+                if (rec) {
+                  try {
+                    const map = JSON.parse(rec);
+                    if (map[val]) {
+                      setDuration(String(map[val].duration));
+                      setIntensity(map[val].intensity);
+                    }
+                  } catch (err) {
+                    console.error("Bad recentActivities", err);
+                  }
+                }
+              }}
               placeholder="Choisir ou taper..."
             />
             <datalist id="activities">
-              {predefinedActivities.map((activity) => (
-                <option key={activity.name} value={activity.name} />
+              {Array.from(new Set([...predefinedActivities.map((a) => a.name), ...sports])).map((activity) => (
+                <option key={activity} value={activity} />
               ))}
             </datalist>
           </div>
@@ -245,9 +293,14 @@ export const AddActivityModal = ({ open, onOpenChange, activity, onSaved }: AddA
           <Button
             className="flex-1 bg-gradient-wellness hover:shadow-medium transition-all duration-300"
             onClick={handleSaveActivity}
+            disabled={saving}
           >
             <Dumbbell className="h-4 w-4 mr-2" />
-            {isEdit ? "Sauvegarder" : "Ajouter l'activité"}
+            {saving
+              ? "Enregistrement..."
+              : isEdit
+              ? "Sauvegarder"
+              : "Ajouter l'activité"}
           </Button>
           </div>
         </div>
