@@ -14,7 +14,7 @@ API_KEY = os.getenv("NUTRIFLOW_NUTRITIONIX_API_KEY")
 # Mapping manuel des activités sportives FR ➔ EN
 SPORTS_MAPPING: Dict[str, str] = {
     "natation": "swimming",
-    "course a pied": "running",
+    "Course à pied": "running",
     "marche": "walking",
     "vélo": "cycling",
     "cyclisme": "cycling",
