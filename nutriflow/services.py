@@ -354,9 +354,15 @@ def get_off_nutrition_by_barcode(barcode: str) -> Optional[Dict]:
         p = data["product"]
         n = p.get("nutriments", {})
         return {
+            "barcode": p.get("code", barcode),
             "name": p.get("product_name", "Inconnu"),
             "brand": p.get("brands", "Inconnue"),
+            "quantity": p.get("quantity"),
+            "categories": p.get("categories"),
             "image_url": p.get("image_url"),
+            "image_front_url": p.get("image_front_url"),
+            "image_nutrition_url": p.get("image_nutrition_url"),
+            "image_ingredients_url": p.get("image_ingredients_url"),
             "energy_kcal_per_100g": n.get("energy-kcal_100g"),
             "fat_per_100g": n.get("fat_100g"),
             "carbs_per_100g": n.get("carbohydrates_100g"),
@@ -364,10 +370,23 @@ def get_off_nutrition_by_barcode(barcode: str) -> Optional[Dict]:
             "proteins_per_100g": n.get("proteins_100g"),
             "salt_per_100g": n.get("salt_100g"),
             "nutriscore_grade": p.get("nutriscore_grade"),
+            "nutriscore_score": p.get("nutriscore_score"),
+            "ecoscore_grade": p.get("ecoscore_grade"),
             "ecoscore_score": p.get("ecoscore_score"),
             "nova_group": p.get("nova_group"),
-            "labels": ", ".join(p.get("labels_tags", [])),
-            "additives": ", ".join(p.get("additives_tags", [])),
+            "labels_tags": ", ".join(p.get("labels_tags", [])),
+            "additives_tags": ", ".join(p.get("additives_tags", [])),
+            "allergens_tags": ", ".join(p.get("allergens_tags", [])),
+            "traces_tags": ", ".join(p.get("traces_tags", [])),
+            "ingredients_text_fr": p.get("ingredients_text_fr"),
+            "ingredients_list": p.get("ingredients", []),
+            "manufacturing_places": p.get("manufacturing_places"),
+            "countries": p.get("countries"),
+            "packaging": p.get("packaging"),
+            "product_quantity": p.get("product_quantity"),
+            "serving_size": p.get("serving_size"),
+            "nova_groups_tags": ", ".join(p.get("nova_groups_tags", [])),
+            "categories_tags": ", ".join(p.get("categories_tags", [])),
         }
     return None
 

@@ -301,23 +301,8 @@ def barcode(data: BarcodeQueryUserInput):
 
     # === Upsert automatique dans la table products ===
     supabase = db.get_supabase_client()
-    data_to_upsert = {
-        "barcode": data.barcode,
-        "name": prod.get("name", ""),
-        "brand": prod.get("brand", ""),
-        "image_url": prod.get("image_url", ""),
-        "energy_kcal_per_100g": prod.get("energy_kcal_per_100g"),
-        "fat_per_100g": prod.get("fat_per_100g"),
-        "carbs_per_100g": prod.get("carbs_per_100g"),
-        "proteins_per_100g": prod.get("proteins_per_100g"),
-        "nutriscore_grade": prod.get("nutriscore_grade", ""),
-        "ecoscore_score": prod.get("ecoscore_score"),
-        "nova_group": prod.get("nova_group"),
-        "labels": prod.get("labels", ""),
-        "additives": prod.get("additives", ""),
-    }
     supabase.table("products").upsert(
-        data_to_upsert, on_conflict=["barcode"]
+        prod, on_conflict=["barcode"]
     ).execute()
     # === Fin upsert automatique ===
 
