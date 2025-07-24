@@ -20,6 +20,7 @@ from nutriflow.api.router import (
     BMRQuery,
     TDEEQuery,
     NutritionixResponse,
+    ProductSummary,
     OFFProduct,
     ExerciseResult,
     BMRResponse,
@@ -50,13 +51,22 @@ SAMPLE_EXERCISES = [
 ]
 
 SAMPLE_PRODUCT = {
+    "barcode": "12345678",
     "name": "TestProduct",
+    "image_url": "http://example.com/img.jpg",
     "brand": "BrandX",
     "energy_kcal_per_100g": 100,
     "fat_per_100g": 1.0,
-    "sugars_per_100g": 2.0,
+    "carbs_per_100g": 12.0,
     "proteins_per_100g": 3.0,
+    "sugars_per_100g": 2.0,
     "salt_per_100g": 0.5,
+    "nutriscore": "b",
+    "labels": "Vegan",
+    "ingredients": "water, sugar",
+    "additives": "E330",
+    "traces": "milk",
+    "countries": "France",
 }
 
 SAMPLE_USER = {
@@ -179,6 +189,7 @@ def mock_router(monkeypatch):
 
     monkeypatch.setattr(db, "update_user", _update_user)
     monkeypatch.setattr(db, "update_meal", lambda *args, **kwargs: None)
+    monkeypatch.setattr(db, "get_product", lambda *a, **k: SAMPLE_PRODUCT)
 
 
 # ----- Unit Tests -----
@@ -224,15 +235,20 @@ def test_ingredients_reuses_existing_meal(monkeypatch):
 def test_barcode_unit():
     q = BarcodeQueryUserInput(barcode="12345678", quantity=50)
     resp = router.barcode(q)
-    assert isinstance(resp, OFFProduct)
+    assert isinstance(resp, ProductSummary)
     assert resp.name == "TestProduct"
-    assert resp.energy_kcal_per_100g == 50
+    assert resp.energy_kcal_per_100g == 100
 
 
 def test_search_unit():
     resp = router.search(query="yogurt")
     assert isinstance(resp, OFFProduct)
     assert resp.energy_kcal_per_100g == 100
+
+
+def test_product_details_unit():
+    resp = router.product_details("12345678")
+    assert resp["name"] == "TestProduct"
 
 
 def test_exercise_unit():

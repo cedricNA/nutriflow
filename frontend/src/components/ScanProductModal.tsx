@@ -8,18 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Scan, Search, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { fetchProductSummary, type ProductSummary } from "@/services/api";
+import { ProductDetailsModal } from "./ProductDetailsModal";
 
-interface Product {
-  barcode: string;
-  name: string;
-  brand: string;
-  nutritionPer100g: {
-    calories: number;
-    protein: number;
-    carbs: number;
-    fat: number;
-  };
-}
 
 interface ScanProductModalProps {
   open: boolean;
@@ -31,49 +22,13 @@ export const ScanProductModal = ({ open, onOpenChange }: ScanProductModalProps) 
   const [barcode, setBarcode] = useState<string>("");
   const [quantity, setQuantity] = useState<string>("");
   const [unit, setUnit] = useState<string>("g");
-  const [product, setProduct] = useState<Product | null>(null);
+  const [product, setProduct] = useState<ProductSummary | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [mealType, setMealType] = useState<string>("");
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const units = ["g", "ml", "unité(s)"];
   const mealTypes = ["Petit-déjeuner", "Déjeuner", "Dîner", "Collation"];
-
-  // Mock products database
-  const mockProducts: Record<string, Product> = {
-    "3017620422003": {
-      barcode: "3017620422003",
-      name: "Nutella",
-      brand: "Ferrero",
-      nutritionPer100g: {
-        calories: 539,
-        protein: 6.3,
-        carbs: 57.5,
-        fat: 30.9
-      }
-    },
-    "3229820100852": {
-      barcode: "3229820100852",
-      name: "Yaourt Nature",
-      brand: "Danone",
-      nutritionPer100g: {
-        calories: 59,
-        protein: 3.3,
-        carbs: 4.6,
-        fat: 3.2
-      }
-    },
-    "8712566191680": {
-      barcode: "8712566191680",
-      name: "Céréales Fitness",
-      brand: "Nestlé",
-      nutritionPer100g: {
-        calories: 362,
-        protein: 7.5,
-        carbs: 78,
-        fat: 2.8
-      }
-    }
-  };
 
   const searchProduct = async () => {
     if (!barcode.trim()) {
@@ -86,45 +41,31 @@ export const ScanProductModal = ({ open, onOpenChange }: ScanProductModalProps) 
     }
 
     setIsSearching(true);
-
-    // Simulate API call delay
-    setTimeout(() => {
-      const foundProduct = mockProducts[barcode.trim()];
-      
-      if (foundProduct) {
-        setProduct(foundProduct);
-        toast({
-          title: "Produit trouvé",
-          description: `${foundProduct.name} par ${foundProduct.brand}`,
-        });
-      } else {
-        setProduct(null);
-        toast({
-          title: "Produit non trouvé",
-          description: "Ce produit n'est pas dans notre base de données.",
-          variant: "destructive"
-        });
-      }
-      
+    try {
+      const found = await fetchProductSummary(barcode.trim());
+      setProduct(found);
+      toast({ title: "Produit trouvé", description: found.name });
+    } catch (err) {
+      setProduct(null);
+      toast({
+        title: "Produit non trouvé",
+        description: String(err),
+        variant: "destructive"
+      });
+    } finally {
       setIsSearching(false);
-    }, 1000);
+    }
   };
 
   const simulateBarcodeScan = () => {
-    // Simulate scanning by selecting a random product
-    const availableBarcodes = Object.keys(mockProducts);
-    const randomBarcode = availableBarcodes[Math.floor(Math.random() * availableBarcodes.length)];
-    setBarcode(randomBarcode);
-    
     toast({
       title: "Scan simulé",
       description: "Code-barres détecté, recherche en cours...",
     });
-
-    // Auto search after scan simulation
-    setTimeout(() => {
-      setProduct(mockProducts[randomBarcode]);
-    }, 500);
+    if (!barcode) {
+      setBarcode("12345678");
+    }
+    searchProduct();
   };
 
   const calculateNutrition = () => {
@@ -132,10 +73,10 @@ export const ScanProductModal = ({ open, onOpenChange }: ScanProductModalProps) 
     
     const multiplier = Number(quantity) / 100;
     return {
-      calories: Math.round(product.nutritionPer100g.calories * multiplier),
-      protein: Math.round(product.nutritionPer100g.protein * multiplier * 10) / 10,
-      carbs: Math.round(product.nutritionPer100g.carbs * multiplier * 10) / 10,
-      fat: Math.round(product.nutritionPer100g.fat * multiplier * 10) / 10
+      calories: Math.round((product.energy_kcal_per_100g ?? 0) * multiplier),
+      protein: Math.round((product.proteins_per_100g ?? 0) * multiplier * 10) / 10,
+      carbs: Math.round((product.carbs_per_100g ?? 0) * multiplier * 10) / 10,
+      fat: Math.round((product.fat_per_100g ?? 0) * multiplier * 10) / 10
     };
   };
 
@@ -233,25 +174,31 @@ export const ScanProductModal = ({ open, onOpenChange }: ScanProductModalProps) 
                   <h3 className="font-semibold text-lg">{product.name}</h3>
                   <p className="text-muted-foreground">{product.brand}</p>
                 </div>
-                
+
+                {product.image_url && (
+                  <img src={product.image_url} alt={product.name} className="w-24 h-24 object-contain mx-auto" />
+                )}
+
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-background/50 rounded-lg">
                   <div className="text-center">
-                    <div className="font-bold text-nutrition-calories">{product.nutritionPer100g.calories}</div>
+                    <div className="font-bold text-nutrition-calories">{product.energy_kcal_per_100g}</div>
                     <div className="text-xs text-muted-foreground">kcal/100g</div>
                   </div>
                   <div className="text-center">
-                    <div className="font-bold text-nutrition-protein">{product.nutritionPer100g.protein}g</div>
+                    <div className="font-bold text-nutrition-protein">{product.proteins_per_100g}g</div>
                     <div className="text-xs text-muted-foreground">Protéines</div>
                   </div>
                   <div className="text-center">
-                    <div className="font-bold text-nutrition-carbs">{product.nutritionPer100g.carbs}g</div>
+                    <div className="font-bold text-nutrition-carbs">{product.carbs_per_100g}g</div>
                     <div className="text-xs text-muted-foreground">Glucides</div>
                   </div>
                   <div className="text-center">
-                    <div className="font-bold text-nutrition-fat">{product.nutritionPer100g.fat}g</div>
+                    <div className="font-bold text-nutrition-fat">{product.fat_per_100g}g</div>
                     <div className="text-xs text-muted-foreground">Lipides</div>
                   </div>
                 </div>
+                <div className="text-sm">Nutriscore : {product.nutriscore?.toUpperCase()}</div>
+                <Button variant="link" onClick={() => setDetailsOpen(true)}>Plus de détails</Button>
               </CardContent>
             </Card>
           )}
@@ -348,6 +295,13 @@ export const ScanProductModal = ({ open, onOpenChange }: ScanProductModalProps) 
           </div>
         </div>
       </DialogContent>
+      {product && (
+        <ProductDetailsModal
+          barcode={product.barcode}
+          open={detailsOpen}
+          onOpenChange={setDetailsOpen}
+        />
+      )}
     </Dialog>
   );
 };

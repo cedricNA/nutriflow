@@ -355,13 +355,15 @@ def get_off_nutrition_by_barcode(barcode: str) -> Optional[Dict]:
         p = data["product"]
         n = p.get("nutriments", {})
         return {
+            "barcode": barcode,
             "name": p.get("product_name", "Inconnu"),
+            "image_url": p.get("image_front_url"),
             "brand": p.get("brands", "Inconnue"),
             "energy_kcal_per_100g": n.get("energy-kcal_100g"),
             "fat_per_100g": n.get("fat_100g"),
-            "sugars_per_100g": n.get("sugars_100g"),
+            "carbs_per_100g": n.get("carbohydrates_100g"),
             "proteins_per_100g": n.get("proteins_100g"),
-            "salt_per_100g": n.get("salt_100g"),
+            "nutriscore": p.get("nutriscore_grade"),
         }
     return None
 
