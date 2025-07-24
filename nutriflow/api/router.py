@@ -571,3 +571,13 @@ def list_activities(
 ):
     """Retourne les activités sportives de l'utilisateur pour la date donnée."""
     return db.get_activities(user_id, date)
+
+
+@router.delete("/activities/{activity_id}")
+def remove_activity(activity_id: str):
+    """Supprime l'activité donnée."""
+    activity = db.get_activity(activity_id)
+    if not activity:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    db.delete_activity(activity_id)
+    return {"detail": "Activity deleted"}

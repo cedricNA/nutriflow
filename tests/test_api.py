@@ -728,3 +728,35 @@ def test_edit_meal_update_item_calls_analysis(monkeypatch):
     assert queries["query"] == "1.0 piece pomme"
     assert updated["calories"] == 60
     assert resp["ingredients"][0]["id"] == "i1"
+
+
+def test_remove_activity_not_found(monkeypatch):
+    monkeypatch.setattr(db, "get_activity", lambda *_: None)
+
+    async def inner():
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            return await ac.delete("/api/activities/act1")
+
+    res = run_async(inner())
+    assert res.status_code == 404
+
+
+def test_remove_activity_success(monkeypatch):
+    record = {}
+    monkeypatch.setattr(db, "get_activity", lambda *_: {"id": "act1"})
+
+    def fake_delete(aid):
+        record["deleted"] = aid
+
+    monkeypatch.setattr(db, "delete_activity", fake_delete)
+
+    async def inner():
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            return await ac.delete("/api/activities/act1")
+
+    res = run_async(inner())
+    assert res.status_code == 200
+    assert res.json()["detail"] == "Activity deleted"
+    assert record["deleted"] == "act1"
