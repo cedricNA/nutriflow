@@ -106,6 +106,28 @@ def get_meal_items(meal_id):
     return response.data or []
 
 
+def update_meal_item(item_id, data):
+    """Met à jour un aliment d'un repas."""
+    supabase = get_supabase_client()
+    response = (
+        supabase.table("meal_items").update(data).eq("id", item_id).execute()
+    )
+    return response.data[0] if response.data else None
+
+
+def delete_meal_item(item_id):
+    """Supprime un aliment d'un repas."""
+    supabase = get_supabase_client()
+    supabase.table("meal_items").delete().eq("id", item_id).execute()
+
+
+def delete_meal(meal_id):
+    """Supprime un repas et ses aliments."""
+    supabase = get_supabase_client()
+    supabase.table("meal_items").delete().eq("meal_id", meal_id).execute()
+    supabase.table("meals").delete().eq("id", meal_id).execute()
+
+
 def get_activities(user_id, date):
     """Récupère les activités sportives pour un utilisateur et une date."""
     supabase = get_supabase_client()
