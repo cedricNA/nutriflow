@@ -26,13 +26,13 @@ def insert_meal(user_id, date, type_repas, note=""):
 def insert_meal_item(
     meal_id,
     nom_aliment,
-    marque,
     quantite,
     unite,
     calories,
     proteines_g,
     glucides_g,
     lipides_g,
+    marque=None,
     barcode=None,
     source=None,
 ):
