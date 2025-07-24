@@ -95,7 +95,7 @@ export const AddMealModal = ({
       return;
     }
     const query = ingredients
-      .map((ing) => `${ing.quantity}${ing.unit} ${ing.name}`)
+      .map((ing) => `${ing.quantity} ${ing.unit} ${ing.name}`)
       .join(", ");
 
     try {
