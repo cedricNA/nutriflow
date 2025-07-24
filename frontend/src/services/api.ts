@@ -40,6 +40,13 @@ export interface UnitMapping {
   [fr: string]: string;
 }
 
+const GENDER_MAP: Record<string, 'male' | 'female'> = {
+  male: 'male',
+  homme: 'male',
+  female: 'female',
+  femme: 'female'
+};
+
 export async function fetchUnits(): Promise<UnitMapping> {
   const res = await fetch('http://localhost:8000/api/units');
   if (!res.ok) {
@@ -149,7 +156,8 @@ export async function analyzeExercise(
       weight_kg: profile?.poids_kg ?? 70,
       height_cm: profile?.taille_cm ?? 170,
       age: profile?.age ?? 30,
-      gender: profile?.sexe ?? 'male'
+      gender:
+        GENDER_MAP[(profile?.sexe ?? 'male').toLowerCase()] ?? 'male'
     })
   });
   if (!res.ok) {
