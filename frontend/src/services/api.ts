@@ -111,3 +111,33 @@ export async function deleteMealItem(itemId: string): Promise<void> {
     throw new Error(`Erreur API ${res.status}: ${text}`);
   }
 }
+
+export interface ExerciseResult {
+  name: string;
+  duration_min: number;
+  calories: number;
+  met?: number;
+}
+
+export async function analyzeExercise(
+  query: string,
+  preview = false
+): Promise<ExerciseResult[]> {
+  const url = `http://localhost:8000/api/exercise${preview ? '?preview=true' : ''}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      query,
+      weight_kg: 70,
+      height_cm: 170,
+      age: 30,
+      gender: 'male'
+    })
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Erreur API ${res.status}: ${text}`);
+  }
+  return (await res.json()) as ExerciseResult[];
+}
