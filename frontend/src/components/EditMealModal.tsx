@@ -60,9 +60,11 @@ export const EditMealModal = ({ meal, open, onOpenChange, onUpdated }: EditMealM
       delete: deletedIds.length ? deletedIds : undefined,
     };
     try {
-      await updateMeal(meal.id, payload);
+      const updated = await updateMeal(meal.id, payload);
+      setMealType(updated.type);
+      setItems(updated.ingredients.map((it) => ({ ...it })));
+      setDeletedIds([]);
       toast({ title: "Repas mis à jour" });
-      onOpenChange(false);
       onUpdated();
     } catch (err) {
       console.error(err);
