@@ -350,7 +350,7 @@ def get_units() -> Dict[str, str]:
 
 
 @router.post("/exercise", response_model=List[ExerciseResult])
-def exercise(data: ExerciseQuery):
+def exercise(data: ExerciseQuery, preview: bool = False):
     """
     Analyse une activité sportive et renvoie la liste d'exercices formatée.
     """
@@ -362,17 +362,19 @@ def exercise(data: ExerciseQuery):
             age=data.age,
             gender=data.gender,
         )
-        # ===== Sauvegarde des activités dans Supabase =====
-        user_id = TEST_USER_ID
-        for ex in exercises_raw:
-            insert_activity(
-                user_id=user_id,
-                date=str(date.today()),
-                description=ex.get("name", ""),
-                duree_min=ex.get("duration_min", 0),
-                calories_brulees=ex.get("nf_calories", 0),
-            )
-        # ===== Fin sauvegarde =====
+
+        if not preview:
+            # ===== Sauvegarde des activités dans Supabase =====
+            user_id = TEST_USER_ID
+            for ex in exercises_raw:
+                insert_activity(
+                    user_id=user_id,
+                    date=str(date.today()),
+                    description=ex.get("name", ""),
+                    duree_min=ex.get("duration_min", 0),
+                    calories_brulees=ex.get("nf_calories", 0),
+                )
+            # ===== Fin sauvegarde =====
         results = [
             ExerciseResult(
                 name=ex.get("name", ""),
