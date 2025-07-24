@@ -20,11 +20,20 @@ interface Ingredient {
 interface AddMealModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Type de repas pré-sélectionné lors de l'ouverture */
+  defaultType?: string;
+  /** Callback appelé après l'ajout réussi d'un repas */
+  onAdded?: () => void;
 }
 
-export const AddMealModal = ({ open, onOpenChange }: AddMealModalProps) => {
+export const AddMealModal = ({
+  open,
+  onOpenChange,
+  defaultType,
+  onAdded,
+}: AddMealModalProps) => {
   const { toast } = useToast();
-  const [mealType, setMealType] = useState<string>("");
+  const [mealType, setMealType] = useState<string>(defaultType || "");
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [totals, setTotals] = useState<Totals | null>(null);
   const [newIngredient, setNewIngredient] = useState({
@@ -35,6 +44,20 @@ export const AddMealModal = ({ open, onOpenChange }: AddMealModalProps) => {
 
   const [units, setUnits] = useState<string[]>([]);
   const mealTypes = ["Petit-déjeuner", "Déjeuner", "Dîner", "Collation"];
+
+  // Met à jour le type présélectionné si la valeur change
+  useEffect(() => {
+    setMealType(defaultType || "");
+  }, [defaultType]);
+
+  // Réinitialise le formulaire à la fermeture
+  useEffect(() => {
+    if (!open) {
+      setIngredients([]);
+      setNewIngredient({ name: "", quantity: "", unit: "g" });
+      setTotals(null);
+    }
+  }, [open]);
 
   useEffect(() => {
     fetchUnits()
@@ -83,6 +106,10 @@ export const AddMealModal = ({ open, onOpenChange }: AddMealModalProps) => {
         title: "Repas ajouté avec succès",
         description: `${ingredients.length} ingrédient(s) enregistrés`,
       });
+      onAdded?.();
+      setIngredients([]);
+      setNewIngredient({ name: "", quantity: "", unit: "g" });
+      onOpenChange(false);
     } catch (err) {
       console.error("Erreur lors de l'analyse :", err);
       toast({

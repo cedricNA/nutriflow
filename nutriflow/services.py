@@ -6,7 +6,6 @@ import asyncio
 import inspect
 from typing import List, Dict, Optional
 from fastapi import HTTPException
-from googletrans import Translator
 
 # Retrieve Nutritionix credentials from environment variables
 APP_ID = os.getenv("NUTRIFLOW_NUTRITIONIX_APP_ID")
