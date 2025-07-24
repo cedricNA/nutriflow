@@ -141,3 +141,46 @@ export async function analyzeExercise(
   }
   return (await res.json()) as ExerciseResult[];
 }
+
+export interface Activity {
+  id: string;
+  description: string;
+  duree_min: number;
+  calories_brulees: number;
+  intensite?: string;
+}
+
+export async function fetchActivities(date: string): Promise<Activity[]> {
+  const res = await fetch(`http://localhost:8000/api/activities?date=${date}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Erreur API ${res.status}: ${text}`);
+  }
+  return (await res.json()) as Activity[];
+}
+
+export async function updateActivity(
+  activityId: string,
+  changes: Partial<Activity>
+): Promise<Activity> {
+  const res = await fetch(`http://localhost:8000/api/activities/${activityId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(changes)
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Erreur API ${res.status}: ${text}`);
+  }
+  return (await res.json()) as Activity;
+}
+
+export async function deleteActivity(activityId: string): Promise<void> {
+  const res = await fetch(`http://localhost:8000/api/activities/${activityId}`, {
+    method: 'DELETE'
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Erreur API ${res.status}: ${text}`);
+  }
+}

@@ -8,15 +8,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Dumbbell, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { analyzeExercise } from "@/services/api";
+import { analyzeExercise, updateActivity, type Activity } from "@/services/api";
 
 interface AddActivityModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  activity?: Activity | null;
+  onSaved?: () => void;
 }
-
-export const AddActivityModal = ({ open, onOpenChange }: AddActivityModalProps) => {
+export const AddActivityModal = ({ open, onOpenChange, activity, onSaved }: AddActivityModalProps) => {
   const { toast } = useToast();
+  const isEdit = Boolean(activity);
   const [activityType, setActivityType] = useState<string>("");
   const [customActivity, setCustomActivity] = useState<string>("");
   const [duration, setDuration] = useState<string>("");
@@ -42,6 +44,19 @@ export const AddActivityModal = ({ open, onOpenChange }: AddActivityModalProps) 
 
   const [estimatedCalories, setEstimatedCalories] = useState<number | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+
+  useEffect(() => {
+    if (isEdit && activity) {
+      setActivityType(activity.description);
+      setDuration(String(activity.duree_min));
+      setIntensity(activity.intensite || "moderate");
+    } else if (!open) {
+      setActivityType("");
+      setCustomActivity("");
+      setDuration("");
+      setIntensity("moderate");
+    }
+  }, [activity, isEdit, open]);
 
   useEffect(() => {
     const fetchPreview = async () => {
@@ -91,10 +106,21 @@ export const AddActivityModal = ({ open, onOpenChange }: AddActivityModalProps) 
         intensityLevels.find((i) => i.value === intensity)?.multiplier || 1.0;
       const caloriesBurned = Math.round(base * intensityMultiplier);
 
-      toast({
-        title: "Activité ajoutée avec succès",
-        description: `${finalActivity} - ${duration} min - ${caloriesBurned} kcal brûlées`,
-      });
+      if (isEdit && activity) {
+        await updateActivity(activity.id, {
+          description: finalActivity,
+          duree_min: Number(duration),
+          intensite: intensity,
+          calories_brulees: caloriesBurned,
+        });
+        toast({ title: "Activité mise à jour" });
+        onSaved?.();
+      } else {
+        toast({
+          title: "Activité ajoutée avec succès",
+          description: `${finalActivity} - ${duration} min - ${caloriesBurned} kcal brûlées`,
+        });
+      }
 
       setActivityType("");
       setCustomActivity("");
@@ -117,7 +143,7 @@ export const AddActivityModal = ({ open, onOpenChange }: AddActivityModalProps) 
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold bg-gradient-primary bg-clip-text text-transparent">
-            Ajouter une activité sportive
+            {isEdit ? "Éditer l'activité" : "Ajouter une activité sportive"}
           </DialogTitle>
         </DialogHeader>
 
@@ -216,13 +242,13 @@ export const AddActivityModal = ({ open, onOpenChange }: AddActivityModalProps) 
             >
               Annuler
             </Button>
-            <Button
-              className="flex-1 bg-gradient-wellness hover:shadow-medium transition-all duration-300"
-              onClick={handleSaveActivity}
-            >
-              <Dumbbell className="h-4 w-4 mr-2" />
-              Ajouter l'activité
-            </Button>
+          <Button
+            className="flex-1 bg-gradient-wellness hover:shadow-medium transition-all duration-300"
+            onClick={handleSaveActivity}
+          >
+            <Dumbbell className="h-4 w-4 mr-2" />
+            {isEdit ? "Sauvegarder" : "Ajouter l'activité"}
+          </Button>
           </div>
         </div>
       </DialogContent>
