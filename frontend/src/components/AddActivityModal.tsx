@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Dumbbell, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useUserProfile } from "@/hooks/use-user-profile";
 import {
   analyzeExercise,
   updateActivity,
@@ -23,6 +24,7 @@ interface AddActivityModalProps {
 }
 export const AddActivityModal = ({ open, onOpenChange, activity, onSaved }: AddActivityModalProps) => {
   const { toast } = useToast();
+  const { data: profile } = useUserProfile(open);
   const isEdit = Boolean(activity);
   const [activityType, setActivityType] = useState<string>("");
   const [customActivity, setCustomActivity] = useState<string>("");
@@ -54,6 +56,10 @@ export const AddActivityModal = ({ open, onOpenChange, activity, onSaved }: AddA
 
   const [estimatedCalories, setEstimatedCalories] = useState<number | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+
+  const formatHeight = (cm: number) => {
+    return (cm / 100).toFixed(2).replace('.', 'm');
+  };
 
   useEffect(() => {
     if (isEdit && activity) {
@@ -87,7 +93,8 @@ export const AddActivityModal = ({ open, onOpenChange, activity, onSaved }: AddA
         setLoadingPreview(true);
         const data = await analyzeExercise(
           `${duration} minutes de ${finalActivity}`,
-          true
+          true,
+          profile
         );
         const base = data[0]?.calories ?? 0;
         const intensityMultiplier =
@@ -101,7 +108,7 @@ export const AddActivityModal = ({ open, onOpenChange, activity, onSaved }: AddA
       }
     };
     fetchPreview();
-  }, [activityType, customActivity, duration, intensity]);
+  }, [activityType, customActivity, duration, intensity, profile]);
 
   const handleSaveActivity = async () => {
     const finalActivity =
@@ -118,7 +125,11 @@ export const AddActivityModal = ({ open, onOpenChange, activity, onSaved }: AddA
 
     try {
       setSaving(true);
-      const data = await analyzeExercise(`${duration} minutes de ${finalActivity}`);
+      const data = await analyzeExercise(
+        `${duration} minutes de ${finalActivity}`,
+        false,
+        profile
+      );
       const base = data[0]?.calories ?? 0;
       const intensityMultiplier =
         intensityLevels.find((i) => i.value === intensity)?.multiplier || 1.0;
@@ -272,7 +283,7 @@ export const AddActivityModal = ({ open, onOpenChange, activity, onSaved }: AddA
                   </div>
                   <div className="text-sm text-muted-foreground">calories brûlées</div>
                   <div className="text-xs text-muted-foreground mt-2">
-                    Basé sur une personne de 70kg, intensité {intensityLevels.find(i => i.value === intensity)?.label.toLowerCase()}
+                    {`Basé sur une personne de ${profile?.poids_kg ?? 70}kg, ${formatHeight(profile?.taille_cm ?? 170)}, ${profile?.sexe ?? 'homme'}, ${profile?.age ?? 30} ans`}
                   </div>
                 </div>
               </CardContent>
