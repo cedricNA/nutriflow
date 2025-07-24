@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { analyzeIngredients, type Totals } from "@/services/api";
+import { analyzeIngredients, fetchUnits, type Totals } from "@/services/api";
 
 interface Ingredient {
   id: string;
@@ -33,8 +33,14 @@ export const AddMealModal = ({ open, onOpenChange }: AddMealModalProps) => {
     unit: "g"
   });
 
-  const units = ["g", "kg", "ml", "l", "unité(s)", "cuillère(s)", "verre(s)"];
+  const [units, setUnits] = useState<string[]>([]);
   const mealTypes = ["Petit-déjeuner", "Déjeuner", "Dîner", "Collation"];
+
+  useEffect(() => {
+    fetchUnits()
+      .then((data) => setUnits(Object.keys(data)))
+      .catch((err) => console.error("Erreur chargement unités", err));
+  }, []);
 
   const addIngredient = () => {
     if (!newIngredient.name || !newIngredient.quantity) return;

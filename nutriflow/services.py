@@ -77,6 +77,31 @@ DEFAULT_MAPPING_PATH = os.path.join(
 # Dictionnaire chargé depuis le fichier CSV (initialement None)
 _CSV_MAPPING: Optional[Dict[str, str]] = None
 
+# Ensemble des unités anglaises reconnues
+UNIT_EN: set = {
+    "tablespoon",
+    "teaspoon",
+    "slice",
+    "cup",
+    "glass",
+    "pinch",
+    "clove",
+    "g",
+    "kg",
+    "ml",
+    "l",
+    "cl",
+    "packet",
+    "can",
+    "pack",
+    "carton",
+    "piece",
+    "fillet",
+    "serving",
+    "stick",
+    "ball",
+}
+
 def load_mapping_csv(filepath: str) -> Dict[str, str]:
     """Charge un CSV "fr,en" ou "fr;en" et retourne un dictionnaire."""
     # On détecte automatiquement le séparateur utilisé
@@ -114,6 +139,27 @@ def reload_mapping(filepath: Optional[str] = None) -> None:
     else:
         _CSV_MAPPING = {}
 
+
+def get_unit_variants() -> Dict[str, str]:
+    """Retourne le mapping complet des unités FR → EN."""
+    _ensure_mapping_loaded()
+    return {fr: en for fr, en in (_CSV_MAPPING or {}).items() if en in UNIT_EN}
+
+
+def normalize_unit(unit: str) -> str:
+    """Normalise une unité française en anglais via le mapping."""
+    _ensure_mapping_loaded()
+    key = clean_text(unit).lower().strip()
+    return (_CSV_MAPPING or {}).get(key, unit)
+
+
+def normalize_units_text(text: str) -> str:
+    """Remplace dans le texte toutes les unités françaises par leur équivalent anglais."""
+    _ensure_mapping_loaded()
+    mapping = get_unit_variants()
+    for fr, en in sorted(mapping.items(), key=lambda i: len(i[0]), reverse=True):
+        text = text.replace(fr, en)
+    return text
 
 def clean_text(text: str) -> str:
     """

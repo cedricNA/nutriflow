@@ -29,3 +29,10 @@ def test_translate_with_csv_mapping(tmp_path, monkeypatch, capsys):
     assert expected in captured.out
     services.reload_mapping()
 
+
+def test_unit_helpers():
+    services.reload_mapping(str(Path(__file__).resolve().parents[1] / "data" / "fr_en_mapping.csv"))
+    units = services.get_unit_variants()
+    assert "cuil. a soupe" in units
+    assert services.normalize_unit("cuil. à soupe") == "tablespoon"
+

@@ -585,3 +585,21 @@ def test_get_daily_nutrition_fallback(monkeypatch):
     assert totals["total_proteins_g"] == 20.0
     assert totals["total_carbs_g"] == 30.0
     assert totals["total_fats_g"] == 7.0
+
+
+def test_units_endpoint_unit():
+    data = router.get_units()
+    assert isinstance(data, dict)
+    assert "cuil. a soupe" in data
+
+
+def test_units_endpoint_integration():
+    async def inner():
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            res = await ac.get("/api/units")
+            assert res.status_code == 200
+            data = res.json()
+            assert "cuil. a soupe" in data
+
+    run_async(inner())
