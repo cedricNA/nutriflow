@@ -131,6 +131,8 @@ class MealPatchPayload(BaseModel):
     add: Optional[List[MealItemCreate]] = None
     update: Optional[List[MealItemUpdate]] = None
     delete: Optional[List[str]] = None
+    type: Optional[str] = None
+    date: Optional[str] = None
 
 
 # ----- Response Models -----
@@ -493,6 +495,13 @@ def list_meals(
 @router.patch("/meals/{meal_id}")
 def edit_meal(meal_id: str, payload: MealPatchPayload):
     """Ajoute, met à jour ou supprime des ingrédients d'un repas."""
+    meal_data = {}
+    if payload.type is not None:
+        meal_data["type"] = payload.type
+    if payload.date is not None:
+        meal_data["date"] = payload.date
+    if meal_data:
+        db.update_meal(meal_id, meal_data)
     if payload.add:
         for item in payload.add:
             db.insert_meal_item(meal_id=meal_id, **item.dict())

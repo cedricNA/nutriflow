@@ -178,6 +178,7 @@ def mock_router(monkeypatch):
         return SAMPLE_USER
 
     monkeypatch.setattr(db, "update_user", _update_user)
+    monkeypatch.setattr(db, "update_meal", lambda *args, **kwargs: None)
 
 
 # ----- Unit Tests -----
@@ -632,3 +633,18 @@ def test_units_endpoint_integration():
             assert "cuil. a soupe" in data
 
     run_async(inner())
+
+
+def test_edit_meal_update_type(monkeypatch):
+    record = {}
+
+    def fake_update(meal_id, data):
+        record["meal_id"] = meal_id
+        record.update(data)
+
+    monkeypatch.setattr(db, "update_meal", fake_update)
+    payload = router.MealPatchPayload(type="diner")
+    resp = router.edit_meal("meal123", payload)
+    assert record["meal_id"] == "meal123"
+    assert record["type"] == "diner"
+    assert resp["id"] == "meal123"
