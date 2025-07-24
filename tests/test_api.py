@@ -20,7 +20,6 @@ from nutriflow.api.router import (
     BMRQuery,
     TDEEQuery,
     NutritionixResponse,
-    ProductSummary,
     OFFProduct,
     ExerciseResult,
     BMRResponse,
@@ -61,12 +60,11 @@ SAMPLE_PRODUCT = {
     "proteins_per_100g": 3.0,
     "sugars_per_100g": 2.0,
     "salt_per_100g": 0.5,
-    "nutriscore": "b",
+    "nutriscore_grade": "b",
+    "ecoscore_score": 75,
+    "nova_group": 3,
     "labels": "Vegan",
-    "ingredients": "water, sugar",
     "additives": "E330",
-    "traces": "milk",
-    "countries": "France",
 }
 
 SAMPLE_USER = {
@@ -232,12 +230,28 @@ def test_ingredients_reuses_existing_meal(monkeypatch):
     assert record["meal_id"] == "existing-id"
 
 
-def test_barcode_unit():
+def test_barcode_unit(monkeypatch):
+    class DummyResult:
+        def __init__(self, data=None):
+            self.data = data or []
+
+    class DummyClient:
+        def table(self, *_):
+            return self
+
+        def upsert(self, *_ , **__):
+            return self
+
+        def execute(self):
+            return DummyResult([])
+
+    monkeypatch.setattr(db, "get_supabase_client", lambda: DummyClient())
+
     q = BarcodeQueryUserInput(barcode="12345678", quantity=50)
     resp = router.barcode(q)
-    assert isinstance(resp, ProductSummary)
+    assert isinstance(resp, OFFProduct)
     assert resp.name == "TestProduct"
-    assert resp.energy_kcal_per_100g == 100
+    assert resp.energy_kcal_per_100g == 50
 
 
 def test_search_unit():
@@ -352,8 +366,23 @@ def test_ingredients_integration_structure():
     run_async(inner())
 
 
-def test_barcode_integration_structure():
+def test_barcode_integration_structure(monkeypatch):
     async def inner():
+        class DummyClient:
+            def table(self, *_):
+                return self
+
+            def upsert(self, *_ , **__):
+                return self
+
+            def execute(self):
+                class R:
+                    data = []
+
+                return R()
+
+        monkeypatch.setattr(db, "get_supabase_client", lambda: DummyClient())
+
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             res = await ac.post(
@@ -364,7 +393,8 @@ def test_barcode_integration_structure():
             if res.status_code == 200:
                 data = res.json()
                 assert all(
-                    field in data for field in ("name", "brand", "energy_kcal_per_100g")
+                    field in data
+                    for field in ("name", "brand", "energy_kcal_per_100g")
                 )
 
     run_async(inner())

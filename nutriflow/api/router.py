@@ -288,14 +288,38 @@ def ingredients(data: IngredientQuery):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/barcode", response_model=ProductSummary)
+@router.post("/barcode", response_model=OFFProduct)
 def barcode(data: BarcodeQueryUserInput):
     """
     Récupère les infos nutritionnelles d'un produit via OpenFoodFacts.
+    Ajoute ou met à jour automatiquement ce produit dans la table products
+    pour alimenter la fiche détaillée.
     """
     prod = get_off_nutrition_by_barcode(data.barcode)
     if not prod:
         raise HTTPException(status_code=404, detail="Produit non trouvé")
+
+    # === Upsert automatique dans la table products ===
+    supabase = db.get_supabase_client()
+    data_to_upsert = {
+        "barcode": data.barcode,
+        "name": prod.get("name", ""),
+        "brand": prod.get("brand", ""),
+        "image_url": prod.get("image_url", ""),
+        "energy_kcal_per_100g": prod.get("energy_kcal_per_100g"),
+        "fat_per_100g": prod.get("fat_per_100g"),
+        "carbs_per_100g": prod.get("carbs_per_100g"),
+        "proteins_per_100g": prod.get("proteins_per_100g"),
+        "nutriscore_grade": prod.get("nutriscore_grade", ""),
+        "ecoscore_score": prod.get("ecoscore_score"),
+        "nova_group": prod.get("nova_group"),
+        "labels": prod.get("labels", ""),
+        "additives": prod.get("additives", ""),
+    }
+    supabase.table("products").upsert(
+        data_to_upsert, on_conflict=["barcode"]
+    ).execute()
+    # === Fin upsert automatique ===
 
     # ===== Recherche/Création du repas =====
     user_id = TEST_USER_ID
@@ -325,7 +349,15 @@ def barcode(data: BarcodeQueryUserInput):
         source="openfoodfacts",
     )
 
-    return ProductSummary(**prod)
+    return OFFProduct(
+        name=prod.get("name", ""),
+        brand=prod.get("brand", ""),
+        energy_kcal_per_100g=_mul(prod.get("energy_kcal_per_100g")),
+        fat_per_100g=_mul(prod.get("fat_per_100g")),
+        sugars_per_100g=_mul(prod.get("sugars_per_100g")),
+        proteins_per_100g=_mul(prod.get("proteins_per_100g")),
+        salt_per_100g=_mul(prod.get("salt_per_100g")),
+    )
 
 
 @router.get("/products/{barcode}/details")

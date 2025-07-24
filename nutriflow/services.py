@@ -345,25 +345,29 @@ def get_off_search_nutrition(query: str) -> Optional[Dict]:
 
 
 def get_off_nutrition_by_barcode(barcode: str) -> Optional[Dict]:
-    """
-    Récupère les informations nutritionnelles via code-barres.
-    Retourne un dict ou None.
-    """
+    """Récupère les informations nutritionnelles via code-barres sur
+    OpenFoodFacts et retourne un dictionnaire complet ou ``None``."""
+
     url = f"https://world.openfoodfacts.org/api/v0/product/{barcode}.json"
     data = requests.get(url).json()
     if data.get("status") == 1:
         p = data["product"]
         n = p.get("nutriments", {})
         return {
-            "barcode": barcode,
             "name": p.get("product_name", "Inconnu"),
-            "image_url": p.get("image_front_url"),
             "brand": p.get("brands", "Inconnue"),
+            "image_url": p.get("image_url"),
             "energy_kcal_per_100g": n.get("energy-kcal_100g"),
             "fat_per_100g": n.get("fat_100g"),
             "carbs_per_100g": n.get("carbohydrates_100g"),
+            "sugars_per_100g": n.get("sugars_100g"),
             "proteins_per_100g": n.get("proteins_100g"),
-            "nutriscore": p.get("nutriscore_grade"),
+            "salt_per_100g": n.get("salt_100g"),
+            "nutriscore_grade": p.get("nutriscore_grade"),
+            "ecoscore_score": p.get("ecoscore_score"),
+            "nova_group": p.get("nova_group"),
+            "labels": ", ".join(p.get("labels_tags", [])),
+            "additives": ", ".join(p.get("additives_tags", [])),
         }
     return None
 
