@@ -191,6 +191,35 @@ def test_ingredients_unit():
     assert resp.totals.total_calories == 190
 
 
+def test_ingredients_reuses_existing_meal(monkeypatch):
+    record = {"insert_calls": 0, "meal_id": None}
+
+    def fake_insert_meal(*args, **kwargs):
+        record["insert_calls"] += 1
+        return "new-id"
+
+    def fake_insert_meal_item(*args, **kwargs):
+        record["meal_id"] = kwargs.get("meal_id") or args[0]
+        return "item-id"
+
+    monkeypatch.setattr(router, "insert_meal", fake_insert_meal)
+    monkeypatch.setattr(router, "insert_meal_item", fake_insert_meal_item)
+    monkeypatch.setattr(db, "insert_meal", fake_insert_meal)
+    monkeypatch.setattr(db, "insert_meal_item", fake_insert_meal_item)
+
+    monkeypatch.setattr(
+        db,
+        "get_meals",
+        lambda *a, **k: [{"id": "existing-id", "type": "dejeuner"}],
+    )
+
+    q = IngredientQuery(query="50g flocons d'avoine", type="dejeuner")
+    resp = router.ingredients(q)
+    assert isinstance(resp, NutritionixResponse)
+    assert record["insert_calls"] == 0
+    assert record["meal_id"] == "existing-id"
+
+
 def test_barcode_unit():
     q = BarcodeQueryUserInput(barcode="12345678", quantity=50)
     resp = router.barcode(q)

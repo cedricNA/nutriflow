@@ -190,7 +190,15 @@ def ingredients(data: IngredientQuery):
 
         # === AJOUT SAUVEGARDE DANS SUPABASE ===
         user_id = TEST_USER_ID  # ID générique en l'absence d'utilisateur connecté
-        meal_id = insert_meal(user_id, str(date.today()), data.type, note="")
+        today = str(date.today())
+        meal_id = None
+        meals = db.get_meals(user_id, today)
+        for m in meals:
+            if m.get("type") == data.type:
+                meal_id = m.get("id")
+                break
+        if not meal_id:
+            meal_id = insert_meal(user_id, today, data.type, note="")
         for food in foods:
             insert_meal_item(
                 meal_id=meal_id,
