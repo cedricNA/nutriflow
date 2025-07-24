@@ -20,6 +20,22 @@ export interface NutritionixResponse {
   totals: Totals;
 }
 
+export interface UserProfile {
+  poids_kg: number;
+  taille_cm: number;
+  age: number;
+  sexe: string;
+}
+
+export async function fetchUserProfile(): Promise<UserProfile> {
+  const res = await fetch('http://localhost:8000/api/user/profile');
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Erreur API ${res.status}: ${text}`);
+  }
+  return (await res.json()) as UserProfile;
+}
+
 export interface UnitMapping {
   [fr: string]: string;
 }
@@ -121,7 +137,8 @@ export interface ExerciseResult {
 
 export async function analyzeExercise(
   query: string,
-  preview = false
+  preview = false,
+  profile?: UserProfile
 ): Promise<ExerciseResult[]> {
   const url = `http://localhost:8000/api/exercise${preview ? '?preview=true' : ''}`;
   const res = await fetch(url, {
@@ -129,10 +146,10 @@ export async function analyzeExercise(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       query,
-      weight_kg: 70,
-      height_cm: 170,
-      age: 30,
-      gender: 'male'
+      weight_kg: profile?.poids_kg ?? 70,
+      height_cm: profile?.taille_cm ?? 170,
+      age: profile?.age ?? 30,
+      gender: profile?.sexe ?? 'male'
     })
   });
   if (!res.ok) {
