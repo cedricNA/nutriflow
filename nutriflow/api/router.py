@@ -23,6 +23,8 @@ from nutriflow.services import (
     calculer_bmr,
     calculer_tdee,
     SPORTS_MAPPING,
+    get_unit_variants,
+    normalize_units_text,
 )
 
 router = APIRouter()
@@ -169,7 +171,8 @@ def ingredients(data: IngredientQuery):
     Analyse une description d'ingrédients et renvoie la liste des aliments et totaux.
     """
     try:
-        foods_raw = analyze_ingredients_nutritionix(data.query)
+        normalized = normalize_units_text(data.query)
+        foods_raw = analyze_ingredients_nutritionix(normalized)
         df = convert_nutritionix_to_df(foods_raw)
         totals_dict = calculate_totals(df)
         foods = [
@@ -275,6 +278,12 @@ def search(
 def get_supported_sports() -> List[str]:
     """Retourne la liste des activités sportives reconnues."""
     return list(SPORTS_MAPPING.keys())
+
+
+@router.get("/units", response_model=Dict[str, str])
+def get_units() -> Dict[str, str]:
+    """Retourne le mapping des unités françaises vers l'anglais."""
+    return get_unit_variants()
 
 
 @router.post("/exercise", response_model=List[ExerciseResult])

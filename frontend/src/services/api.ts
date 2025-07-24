@@ -20,6 +20,19 @@ export interface NutritionixResponse {
   totals: Totals;
 }
 
+export interface UnitMapping {
+  [fr: string]: string;
+}
+
+export async function fetchUnits(): Promise<UnitMapping> {
+  const res = await fetch('http://localhost:8000/api/units');
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Erreur API ${res.status}: ${text}`);
+  }
+  return (await res.json()) as UnitMapping;
+}
+
 export async function analyzeIngredients(input: string, mealType: string): Promise<NutritionixResponse> {
   console.log('Données envoyées :', { query: input, type: mealType });
   const res = await fetch('http://localhost:8000/api/ingredients', {
