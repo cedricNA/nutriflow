@@ -333,6 +333,7 @@ def get_off_search_nutrition(query: str) -> Optional[Dict]:
         p = data["products"][0]
         n = p.get("nutriments", {})
         return {
+            "barcode": p.get("code"),
             "name": p.get("product_name", "Inconnu"),
             "brand": p.get("brands", "Inconnue"),
             "energy_kcal_per_100g": n.get("energy-kcal_100g"),
