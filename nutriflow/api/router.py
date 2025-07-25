@@ -194,6 +194,7 @@ class ProductSummary(BaseModel):
 
 
 class OFFProduct(BaseModel):
+    barcode: str
     name: str
     brand: str
     energy_kcal_per_100g: Optional[float]
@@ -335,6 +336,7 @@ def barcode(data: BarcodeQueryUserInput):
     )
 
     return OFFProduct(
+        barcode=data.barcode,
         name=prod.get("name", ""),
         brand=prod.get("brand", ""),
         energy_kcal_per_100g=_mul(prod.get("energy_kcal_per_100g")),
@@ -364,7 +366,16 @@ def search(
     prod = get_off_search_nutrition(query)
     if not prod:
         raise HTTPException(status_code=404, detail="Produit non trouvé")
-    return OFFProduct(**prod)
+    return OFFProduct(
+        barcode=prod.get("barcode", ""),
+        name=prod.get("name", ""),
+        brand=prod.get("brand", ""),
+        energy_kcal_per_100g=prod.get("energy_kcal_per_100g"),
+        fat_per_100g=prod.get("fat_per_100g"),
+        sugars_per_100g=prod.get("sugars_per_100g"),
+        proteins_per_100g=prod.get("proteins_per_100g"),
+        salt_per_100g=prod.get("salt_per_100g"),
+    )
 
 
 @router.get("/sports", response_model=List[str])

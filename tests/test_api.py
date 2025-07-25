@@ -252,12 +252,14 @@ def test_barcode_unit(monkeypatch):
     assert isinstance(resp, OFFProduct)
     assert resp.name == "TestProduct"
     assert resp.energy_kcal_per_100g == 50
+    assert resp.barcode == "12345678"
 
 
 def test_search_unit():
     resp = router.search(query="yogurt")
     assert isinstance(resp, OFFProduct)
     assert resp.energy_kcal_per_100g == 100
+    assert resp.barcode == "12345678"
 
 
 def test_product_details_unit():
@@ -394,7 +396,7 @@ def test_barcode_integration_structure(monkeypatch):
                 data = res.json()
                 assert all(
                     field in data
-                    for field in ("name", "brand", "energy_kcal_per_100g")
+                    for field in ("barcode", "name", "brand", "energy_kcal_per_100g")
                 )
 
     run_async(inner())
@@ -408,7 +410,7 @@ def test_search_integration_structure():
             assert res.status_code in (200, 404)
             if res.status_code == 200:
                 data = res.json()
-                assert "name" in data and "energy_kcal_per_100g" in data
+                assert "barcode" in data and "name" in data and "energy_kcal_per_100g" in data
 
     run_async(inner())
 
