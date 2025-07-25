@@ -250,12 +250,30 @@ export interface ProductSummary {
 }
 
 export interface ProductDetails extends ProductSummary {
-  labels?: string;
-  ingredients?: string;
-  additives?: string;
-  traces?: string;
+  quantity?: string;
+  serving_size?: string;
+  categories?: string;
+  labels_tags?: string;
+  additives_tags?: string;
+  allergens_tags?: string;
+  traces_tags?: string;
+  ingredients_text_fr?: string;
+  ingredients_list?: string[];
+  packaging?: string;
   countries?: string;
-  nova_score?: number;
+  manufacturing_places?: string;
+  nutriscore_grade?: string;
+  nutriscore_score?: number;
+  ecoscore_grade?: string;
+  ecoscore_score?: number;
+  nova_group?: number;
+  nova_groups_tags?: string;
+  categories_tags?: string;
+  image_front_url?: string;
+  image_nutrition_url?: string;
+  image_ingredients_url?: string;
+  sugars_per_100g?: number;
+  salt_per_100g?: number;
 }
 
 export async function fetchProductSummary(barcode: string): Promise<ProductSummary> {
