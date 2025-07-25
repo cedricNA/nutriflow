@@ -106,9 +106,13 @@ export const ProductDetailsModal = ({ barcode, onClose }: ProductDetailsModalPro
                 )}
                 {details.ingredients_list && details.ingredients_list.length > 0 && (
                   <ul className="list-disc list-inside text-sm space-y-1">
-                    {details.ingredients_list.map((ing) => (
-                      <li key={ing}>{ing}</li>
-                    ))}
+                    {details.ingredients_list.map((ing, idx) => {
+                      const text = typeof ing === 'string' ? ing : ing.text ?? ''
+                      const key = typeof ing === 'string' ? ing : ing.id ?? idx
+                      return (
+                        <li key={key}>{text}</li>
+                      )
+                    })}
                   </ul>
                 )}
               </CardContent>
