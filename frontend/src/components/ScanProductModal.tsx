@@ -25,7 +25,7 @@ export const ScanProductModal = ({ open, onOpenChange }: ScanProductModalProps) 
   const [product, setProduct] = useState<ProductSummary | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [mealType, setMealType] = useState<string>("");
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [barcodeDetail, setBarcodeDetail] = useState<string | null>(null);
 
   const units = ["g", "ml", "unité(s)"];
   const mealTypes = ["Petit-déjeuner", "Déjeuner", "Dîner", "Collation"];
@@ -44,6 +44,7 @@ export const ScanProductModal = ({ open, onOpenChange }: ScanProductModalProps) 
     try {
       const found = await fetchProductSummary(barcode.trim());
       setProduct(found);
+      console.log("product", found);
       toast({ title: "Produit trouvé", description: found.name });
     } catch (err) {
       setProduct(null);
@@ -198,7 +199,9 @@ export const ScanProductModal = ({ open, onOpenChange }: ScanProductModalProps) 
                   </div>
                 </div>
                 <div className="text-sm">Nutriscore : {product.nutriscore?.toUpperCase()}</div>
-                <Button variant="link" onClick={() => setDetailsOpen(true)}>Plus de détails</Button>
+                <Button variant="link" onClick={() => setBarcodeDetail(product.barcode)}>
+                  Plus de détails
+                </Button>
               </CardContent>
             </Card>
           )}
@@ -295,11 +298,10 @@ export const ScanProductModal = ({ open, onOpenChange }: ScanProductModalProps) 
           </div>
         </div>
       </DialogContent>
-      {product && (
+      {barcodeDetail && (
         <ProductDetailsModal
-          barcode={product.barcode}
-          open={detailsOpen}
-          onOpenChange={setDetailsOpen}
+          barcode={barcodeDetail}
+          onClose={() => setBarcodeDetail(null)}
         />
       )}
     </Dialog>

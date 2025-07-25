@@ -6,30 +6,36 @@ import { Separator } from "@/components/ui/separator";
 import { fetchProductDetails, type ProductDetails } from "@/services/api";
 
 interface ProductDetailsModalProps {
-  barcode: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  barcode: string | null;
+  onClose: () => void;
 }
-
-export const ProductDetailsModal = ({ barcode, open, onOpenChange }: ProductDetailsModalProps) => {
+export const ProductDetailsModal = ({ barcode, onClose }: ProductDetailsModalProps) => {
   const [details, setDetails] = useState<ProductDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open) {
-      fetchProductDetails(barcode)
-        .then(setDetails)
-        .catch(() => setDetails(null));
-    }
-  }, [barcode, open]);
+    if (!barcode) return;
+    setLoading(true);
+    fetchProductDetails(barcode)
+      .then((data) => {
+        setDetails(data);
+        setError(null);
+      })
+      .catch(() => setError("Erreur lors du chargement."))
+      .finally(() => setLoading(false));
+  }, [barcode]);
 
-  if (!open) return null;
+  if (!barcode) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={!!barcode} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>Détails produit</DialogTitle>
         </DialogHeader>
+        {loading && <p>Chargement...</p>}
+        {error && <p className="text-destructive">{error}</p>}
         {details && (
           <div className="space-y-4">
             <Card>
