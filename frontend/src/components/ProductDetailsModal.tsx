@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { fetchProductDetails, type ProductDetails } from "@/services/api";
 
@@ -42,23 +43,74 @@ export const ProductDetailsModal = ({ barcode, onClose }: ProductDetailsModalPro
               <CardHeader>
                 <CardTitle>{details.name}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
-                {details.image_url && (
-                  <img src={details.image_url} alt={details.name} className="w-32 h-32 object-contain mx-auto" />
-                )}
-                <p className="text-sm text-muted-foreground">{details.brand}</p>
-                <div className="grid grid-cols-2 gap-2">
+              <CardContent className="space-y-4">
+                <div className="flex flex-col md:flex-row gap-4">
+                  {details.image_url && (
+                    <img src={details.image_url} alt={details.name} className="w-32 h-32 object-contain mx-auto" />
+                  )}
+                  <div className="flex-1 space-y-2 text-sm">
+                    <p className="text-muted-foreground">{details.brand}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {details.quantity && <div>Quantité : {details.quantity}</div>}
+                      {details.serving_size && <div>Portion : {details.serving_size}</div>}
+                      {details.packaging && <div>Emballage : {details.packaging}</div>}
+                      {details.manufacturing_places && <div>Fabriqué à : {details.manufacturing_places}</div>}
+                      {details.countries && <div>Pays : {details.countries}</div>}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>Calories: {details.energy_kcal_per_100g} kcal/100g</div>
                   <div>Protéines: {details.proteins_per_100g} g</div>
                   <div>Glucides: {details.carbs_per_100g} g</div>
                   <div>Lipides: {details.fat_per_100g} g</div>
+                  {details.sugars_per_100g !== undefined && <div>Sucres: {details.sugars_per_100g} g</div>}
+                  {details.salt_per_100g !== undefined && <div>Sel: {details.salt_per_100g} g</div>}
                 </div>
-                <p>Nutriscore: {details.nutriscore?.toUpperCase()}</p>
-                {details.ingredients && <p>Ingrédients: {details.ingredients}</p>}
-                {details.labels && <p>Labels: {details.labels}</p>}
-                {details.additives && <p>Additifs: {details.additives}</p>}
-                {details.traces && <p>Traces: {details.traces}</p>}
-                {details.countries && <p>Pays: {details.countries}</p>}
+
+                <div className="flex flex-wrap gap-2">
+                  {details.nutriscore_grade && (
+                    <Badge variant="secondary">NutriScore {details.nutriscore_grade.toUpperCase()}</Badge>
+                  )}
+                  {details.ecoscore_grade && (
+                    <Badge variant="secondary">EcoScore {details.ecoscore_grade.toUpperCase()}</Badge>
+                  )}
+                  {details.nova_group && (
+                    <Badge variant="secondary">NOVA {details.nova_group}</Badge>
+                  )}
+                </div>
+
+                {details.labels_tags && (
+                  <div className="flex flex-wrap gap-2 text-sm">
+                    {details.labels_tags.split(',').map((l) => (
+                      <Badge key={l.trim()} variant="outline">{l.trim()}</Badge>
+                    ))}
+                  </div>
+                )}
+
+                {details.additives_tags && (
+                  <p className="text-sm">Additifs : {details.additives_tags}</p>
+                )}
+                {details.allergens_tags && (
+                  <p className="text-sm">Allergènes : {details.allergens_tags}</p>
+                )}
+                {details.traces_tags && (
+                  <p className="text-sm">Traces : {details.traces_tags}</p>
+                )}
+                {details.categories && (
+                  <p className="text-sm">Catégories : {details.categories}</p>
+                )}
+                {details.ingredients_text_fr && (
+                  <p className="text-sm whitespace-pre-wrap">{details.ingredients_text_fr}</p>
+                )}
+                {details.ingredients_list && details.ingredients_list.length > 0 && (
+                  <ul className="list-disc list-inside text-sm space-y-1">
+                    {details.ingredients_list.map((ing) => (
+                      <li key={ing}>{ing}</li>
+                    ))}
+                  </ul>
+                )}
               </CardContent>
             </Card>
             <Separator />
