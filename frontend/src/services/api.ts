@@ -249,16 +249,22 @@ export interface ProductSummary {
   nutriscore?: string;
 }
 
+export interface IngredientItem {
+  id?: string
+  text?: string
+  [key: string]: any
+}
+
 export interface ProductDetails extends ProductSummary {
-  quantity?: string;
-  serving_size?: string;
-  categories?: string;
-  labels_tags?: string;
-  additives_tags?: string;
-  allergens_tags?: string;
-  traces_tags?: string;
-  ingredients_text_fr?: string;
-  ingredients_list?: string[];
+  quantity?: string
+  serving_size?: string
+  categories?: string
+  labels_tags?: string
+  additives_tags?: string
+  allergens_tags?: string
+  traces_tags?: string
+  ingredients_text_fr?: string
+  ingredients_list?: Array<string | IngredientItem>
   packaging?: string;
   countries?: string;
   manufacturing_places?: string;
