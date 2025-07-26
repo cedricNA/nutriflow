@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ export const ActivityList = () => {
   const [editing, setEditing] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState<DailySummary | null>(null);
+  const queryClient = useQueryClient();
 
   const loadActivities = async () => {
     try {
@@ -30,6 +32,7 @@ export const ActivityList = () => {
       setActivities(data);
       const sum = await fetchDailySummary(selectedDate);
       setSummary(sum);
+      queryClient.setQueryData(["daily-summary", selectedDate], sum);
     } catch (err) {
       console.error(err);
       toast({
@@ -53,6 +56,9 @@ export const ActivityList = () => {
       await deleteActivity(id);
       toast({ title: "Activité supprimée" });
       await loadActivities();
+      queryClient.invalidateQueries({
+        queryKey: ["daily-summary", selectedDate],
+      });
     } catch (err) {
       console.error(err);
       toast({ title: "Erreur", description: String(err), variant: "destructive" });
@@ -68,7 +74,12 @@ export const ActivityList = () => {
           open={Boolean(editing)}
           onOpenChange={(o) => !o && setEditing(null)}
           activity={editing}
-          onSaved={loadActivities}
+          onSaved={() => {
+            loadActivities();
+            queryClient.invalidateQueries({
+              queryKey: ["daily-summary", selectedDate],
+            });
+          }}
         />
       )}
       <div className="flex items-center gap-3">
