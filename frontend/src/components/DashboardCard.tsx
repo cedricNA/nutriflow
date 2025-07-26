@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ReactNode } from "react";
 
 interface DashboardCardProps {
@@ -8,15 +9,17 @@ interface DashboardCardProps {
   icon?: ReactNode;
   variant?: "default" | "calories" | "protein" | "carbs" | "fat";
   trend?: "up" | "down" | "neutral";
+  loading?: boolean;
 }
 
-export const DashboardCard = ({ 
-  title, 
-  value, 
-  subtitle, 
-  icon, 
+export const DashboardCard = ({
+  title,
+  value,
+  subtitle,
+  icon,
   variant = "default",
-  trend = "neutral" 
+  trend = "neutral",
+  loading = false,
 }: DashboardCardProps) => {
   const getVariantClasses = () => {
     switch (variant) {
@@ -48,16 +51,25 @@ export const DashboardCard = ({
         {icon && <div className="text-muted-foreground">{icon}</div>}
       </CardHeader>
       <CardContent>
-        <div className="flex items-baseline space-x-2">
-          <div className="text-2xl font-bold text-foreground">{value}</div>
-          {trend !== "neutral" && (
-            <span className={`text-xs ${trend === "up" ? "text-success" : "text-warning"}`}>
-              {getTrendIcon()}
-            </span>
-          )}
-        </div>
-        {subtitle && (
-          <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+        {loading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-20" />
+            {subtitle && <Skeleton className="h-4 w-24" />}
+          </div>
+        ) : (
+          <>
+            <div className="flex items-baseline space-x-2">
+              <div className="text-2xl font-bold text-foreground">{value}</div>
+              {trend !== "neutral" && (
+                <span className={`text-xs ${trend === "up" ? "text-success" : "text-warning"}`}>
+                  {getTrendIcon()}
+                </span>
+              )}
+            </div>
+            {subtitle && (
+              <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

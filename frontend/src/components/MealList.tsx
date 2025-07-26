@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import {
   fetchMeals,
   deleteMeal,
   deleteMealItem,
+  fetchDailySummary,
   type Meal,
 } from "@/services/api";
 import { EditMealModal } from "./EditMealModal";
@@ -23,11 +25,13 @@ export const MealList = () => {
   const [addMealOpen, setAddMealOpen] = useState(false);
   const [addMealType, setAddMealType] = useState<string | undefined>(undefined);
   const mealTypes = ["Petit-déjeuner", "Déjeuner", "Dîner", "Collation"];
+  const queryClient = useQueryClient();
 
   const loadMeals = async () => {
     try {
       const data = await fetchMeals(selectedDate);
       setMeals(data);
+      queryClient.setQueryData(["daily-summary", selectedDate], await fetchDailySummary(selectedDate));
     } catch (err) {
       console.error(err);
       toast({
@@ -48,6 +52,9 @@ export const MealList = () => {
       await deleteMeal(mealId);
       toast({ title: "Repas supprimé" });
       loadMeals();
+      queryClient.invalidateQueries({
+        queryKey: ["daily-summary", selectedDate],
+      });
     } catch (err) {
       console.error(err);
       toast({ title: "Erreur", description: String(err), variant: "destructive" });
@@ -60,6 +67,9 @@ export const MealList = () => {
       await deleteMealItem(itemId);
       toast({ title: "Ingrédient supprimé" });
       loadMeals();
+      queryClient.invalidateQueries({
+        queryKey: ["daily-summary", selectedDate],
+      });
     } catch (err) {
       console.error(err);
       toast({ title: "Erreur", description: String(err), variant: "destructive" });
@@ -77,7 +87,12 @@ export const MealList = () => {
           meal={editingMeal}
           open={Boolean(editingMeal)}
           onOpenChange={(o) => !o && setEditingMeal(null)}
-          onUpdated={loadMeals}
+          onUpdated={() => {
+            loadMeals();
+            queryClient.invalidateQueries({
+              queryKey: ["daily-summary", selectedDate],
+            });
+          }}
         />
       )}
       <AddMealModal
@@ -87,7 +102,12 @@ export const MealList = () => {
           if (!o) setAddMealType(undefined);
         }}
         defaultType={addMealType}
-        onAdded={loadMeals}
+        onAdded={() => {
+          loadMeals();
+          queryClient.invalidateQueries({
+            queryKey: ["daily-summary", selectedDate],
+          });
+        }}
       />
       <div className="flex items-center gap-3">
         <Input

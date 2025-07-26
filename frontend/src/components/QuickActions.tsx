@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, UtensilsCrossed, Dumbbell, Scan, List } from "lucide-react";
@@ -13,11 +15,24 @@ export const QuickActions = ({}: QuickActionsProps) => {
   const [addMealOpen, setAddMealOpen] = useState(false);
   const [addActivityOpen, setAddActivityOpen] = useState(false);
   const [scanProductOpen, setScanProductOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const today = format(new Date(), "yyyy-MM-dd");
+
+  const refreshSummary = () =>
+    queryClient.invalidateQueries({ queryKey: ["daily-summary", today] });
 
   return (
     <>
-      <AddMealModal open={addMealOpen} onOpenChange={setAddMealOpen} />
-      <AddActivityModal open={addActivityOpen} onOpenChange={setAddActivityOpen} />
+      <AddMealModal
+        open={addMealOpen}
+        onOpenChange={setAddMealOpen}
+        onAdded={refreshSummary}
+      />
+      <AddActivityModal
+        open={addActivityOpen}
+        onOpenChange={setAddActivityOpen}
+        onSaved={refreshSummary}
+      />
       <ScanProductModal open={scanProductOpen} onOpenChange={setScanProductOpen} />
     <Card className="shadow-soft">
       <CardHeader>
