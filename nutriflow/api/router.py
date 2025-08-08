@@ -27,6 +27,8 @@ from nutriflow.services import (
     calculate_totals,
     calculer_bmr,
     calculer_tdee,
+    calculate_calorie_goal,
+    calculate_macro_goals,
     SPORTS_MAPPING,
     get_unit_variants,
     normalize_units_text,
@@ -230,6 +232,17 @@ class DailySummary(BaseModel):
     tdee: float
     balance_calorique: float
     conseil: str
+
+
+class DailyNutritionSummary(BaseModel):
+    calories_consumed: Optional[float] = None
+    calories_goal: Optional[float] = None
+    proteins_consumed: Optional[float] = None
+    proteins_goal: Optional[float] = None
+    carbs_consumed: Optional[float] = None
+    carbs_goal: Optional[float] = None
+    fats_consumed: Optional[float] = None
+    fats_goal: Optional[float] = None
 
 
 # ----- Endpoints -----
@@ -464,23 +477,48 @@ def tdee(data: TDEEQuery):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/daily-summary", response_model=DailySummary)
+@router.get("/daily-summary", response_model=DailyNutritionSummary)
 def daily_summary(
     date_str: str = Query(default=None, description="Date au format YYYY-MM-DD")
 ):
-    """Calcule ou met à jour le résumé quotidien pour la date donnée."""
+    """Retourne l'apport actuel et les objectifs calories/macros pour la date donnée."""
     user_id = TEST_USER_ID
-    today = str(date.today())
-    d = date_str if date_str else today
+    d = date_str if date_str else str(date.today())
 
-    data = db.aggregate_daily_summary(user_id, d)
-    return DailySummary(
-        date=d,
-        calories_apportees=data.get("calories_apportees", 0.0),
-        calories_brulees=data.get("calories_brulees", 0.0),
-        tdee=data.get("tdee", 0.0),
-        balance_calorique=data.get("balance_calorique", 0.0),
-        conseil=data.get("conseil", ""),
+    totals = db.get_daily_nutrition(user_id, d) or {}
+    calories_cons = totals.get("total_calories")
+    prot_cons = totals.get("total_proteins_g")
+    carb_cons = totals.get("total_carbs_g")
+    fat_cons = totals.get("total_fats_g")
+
+    user = db.get_user(user_id)
+    if not user:
+        return DailyNutritionSummary(
+            calories_consumed=calories_cons,
+            proteins_consumed=prot_cons,
+            carbs_consumed=carb_cons,
+            fats_consumed=fat_cons,
+        )
+
+    try:
+        tdee_val = calculer_tdee(
+            user["poids_kg"], user["taille_cm"], user["age"], user["sexe"], 0.0
+        )
+    except Exception:
+        tdee_val = None
+
+    cal_goal = calculate_calorie_goal(tdee_val, user.get("objectif", "maintien"))
+    macros_goal = calculate_macro_goals(user.get("poids_kg"), cal_goal)
+
+    return DailyNutritionSummary(
+        calories_consumed=calories_cons,
+        calories_goal=cal_goal,
+        proteins_consumed=prot_cons,
+        proteins_goal=macros_goal.get("proteins"),
+        carbs_consumed=carb_cons,
+        carbs_goal=macros_goal.get("carbs"),
+        fats_consumed=fat_cons,
+        fats_goal=macros_goal.get("fats"),
     )
 
 
