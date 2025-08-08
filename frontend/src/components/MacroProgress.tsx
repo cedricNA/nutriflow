@@ -1,13 +1,14 @@
 import { Progress } from "@/components/ui/progress";
 
 interface MacroProgressProps {
-  protein: { current: number; target: number };
-  carbs: { current: number; target: number };
-  fat: { current: number; target: number };
+  protein: { current: number; target?: number };
+  carbs: { current: number; target?: number };
+  fat: { current: number; target?: number };
 }
 
 export const MacroProgress = ({ protein, carbs, fat }: MacroProgressProps) => {
-  const getMacroPercentage = (current: number, target: number) => {
+  const getMacroPercentage = (current: number, target?: number) => {
+    if (!target) return 0;
     return Math.min((current / target) * 100, 100);
   };
 
@@ -43,22 +44,23 @@ export const MacroProgress = ({ protein, carbs, fat }: MacroProgressProps) => {
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium text-foreground">{macro.name}</span>
             <span className="text-sm text-muted-foreground">
-              {macro.current}g / {macro.target}g
+              {macro.target ? `${macro.current}g / ${macro.target}g` : `${macro.current}g`}
             </span>
           </div>
-          <div className="relative">
-            <Progress 
-              value={macro.percentage} 
-              className="h-2"
-            />
-            <div 
-              className={`absolute top-0 left-0 h-2 rounded-full transition-all duration-500 ${macro.color}`}
-              style={{ width: `${macro.percentage}%` }}
-            />
-          </div>
-          <div className="text-xs text-muted-foreground text-right">
-            {macro.percentage.toFixed(0)}%
-          </div>
+          {macro.target && (
+            <>
+              <div className="relative">
+                <Progress value={macro.percentage} className="h-2" />
+                <div
+                  className={`absolute top-0 left-0 h-2 rounded-full transition-all duration-500 ${macro.color}`}
+                  style={{ width: `${macro.percentage}%` }}
+                />
+              </div>
+              <div className="text-xs text-muted-foreground text-right">
+                {macro.percentage.toFixed(0)}%
+              </div>
+            </>
+          )}
         </div>
       ))}
     </div>

@@ -211,12 +211,14 @@ export async function deleteActivity(activityId: string): Promise<void> {
 }
 
 export interface DailySummary {
-  date: string;
-  calories_apportees: number;
-  calories_brulees: number;
-  tdee: number;
-  balance_calorique: number;
-  conseil: string;
+  calories_consumed?: number;
+  calories_goal?: number;
+  proteins_consumed?: number;
+  proteins_goal?: number;
+  carbs_consumed?: number;
+  carbs_goal?: number;
+  fats_consumed?: number;
+  fats_goal?: number;
 }
 
 export async function fetchDailySummary(date: string): Promise<DailySummary> {

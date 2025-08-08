@@ -1,10 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { ReactNode } from "react";
 
 interface DashboardCardProps {
   title: string;
-  value: string | number;
+  value: number;
+  goal?: number;
+  unit?: string;
   subtitle?: string;
   icon?: ReactNode;
   variant?: "default" | "calories" | "protein" | "carbs" | "fat";
@@ -15,6 +18,8 @@ interface DashboardCardProps {
 export const DashboardCard = ({
   title,
   value,
+  goal,
+  unit,
   subtitle,
   icon,
   variant = "default",
@@ -42,8 +47,13 @@ export const DashboardCard = ({
     return "";
   };
 
+  const progress = goal ? Math.min((value / goal) * 100, 100) : undefined;
+
   return (
-    <Card className={`shadow-soft hover:shadow-medium transition-all duration-300 ${getVariantClasses()}`}>
+    <Card
+      aria-label={title}
+      className={`shadow-soft hover:shadow-medium transition-all duration-300 ${getVariantClasses()}`}
+    >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}
@@ -54,22 +64,29 @@ export const DashboardCard = ({
         {loading ? (
           <div className="space-y-2">
             <Skeleton className="h-6 w-20" />
-            {subtitle && <Skeleton className="h-4 w-24" />}
+            {goal !== undefined && <Skeleton className="h-4 w-full" />}
           </div>
         ) : (
-          <>
+          <div className="space-y-2 animate-fade-in">
             <div className="flex items-baseline space-x-2">
-              <div className="text-2xl font-bold text-foreground">{value}</div>
+              <div className="text-2xl font-bold text-foreground">
+                {goal !== undefined
+                  ? `${Math.round(value)} / ${Math.round(goal)} ${unit ?? ""}`
+                  : `${Math.round(value)} ${unit ?? ""}`}
+              </div>
               {trend !== "neutral" && (
                 <span className={`text-xs ${trend === "up" ? "text-success" : "text-warning"}`}>
                   {getTrendIcon()}
                 </span>
               )}
             </div>
+            {progress !== undefined && (
+              <Progress value={progress} className="h-2" />
+            )}
             {subtitle && (
               <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
             )}
-          </>
+          </div>
         )}
       </CardContent>
     </Card>

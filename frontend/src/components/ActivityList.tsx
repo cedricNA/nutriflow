@@ -11,7 +11,6 @@ import {
   deleteActivity,
   fetchDailySummary,
   type Activity,
-  type DailySummary,
 } from "@/services/api";
 import { AddActivityModal } from "./AddActivityModal";
 
@@ -22,7 +21,7 @@ export const ActivityList = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [editing, setEditing] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(false);
-  const [summary, setSummary] = useState<DailySummary | null>(null);
+  const [totalBurned, setTotalBurned] = useState(0);
   const queryClient = useQueryClient();
 
   const loadActivities = async () => {
@@ -30,8 +29,8 @@ export const ActivityList = () => {
       setLoading(true);
       const data = await fetchActivities(selectedDate);
       setActivities(data);
+      setTotalBurned(data.reduce((acc, a) => acc + a.calories_brulees, 0));
       const sum = await fetchDailySummary(selectedDate);
-      setSummary(sum);
       queryClient.setQueryData(["daily-summary", selectedDate], sum);
     } catch (err) {
       console.error(err);
@@ -119,9 +118,9 @@ export const ActivityList = () => {
       {activities.length === 0 && !loading && (
         <p>Aucune activité pour cette date.</p>
       )}
-      {summary && (
+      {activities.length > 0 && (
         <div className="text-sm text-muted-foreground">
-          Total : {Math.round(summary.calories_brulees)} kcal brûlées
+          Total : {Math.round(totalBurned)} kcal brûlées
         </div>
       )}
       <Separator />
