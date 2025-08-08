@@ -1,34 +1,27 @@
 import { format } from "date-fns";
-import { useState } from "react";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { DashboardCard } from "@/components/DashboardCard";
 import { MacroProgress } from "@/components/MacroProgress";
 import { QuickActions } from "@/components/QuickActions";
 import { AdviceBanner } from "@/components/AdviceBanner";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Flame, Droplet, Target, TrendingUp } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Flame, Drumstick, Wheat, Egg } from "lucide-react";
 import { useDailySummary } from "@/hooks/use-daily-summary";
 import heroImage from "@/assets/nutriflow-hero.jpg";
 
 const Index = () => {
-  const { toast } = useToast();
-  
   const today = format(new Date(), "yyyy-MM-dd");
   const { data: summary, isLoading } = useDailySummary(today);
 
-  const showHydration = false;
-
   const macrosData = {
-    protein: { current: 0, target: 100 },
-    carbs: { current: 0, target: 100 },
-    fat: { current: 0, target: 100 },
+    protein: { current: summary?.proteins_consumed ?? 0, target: summary?.proteins_goal },
+    carbs: { current: summary?.carbs_consumed ?? 0, target: summary?.carbs_goal },
+    fat: { current: summary?.fats_consumed ?? 0, target: summary?.fats_goal },
   };
 
-  const calorieBalance = (summary?.calories_apportees || 0) - (summary?.calories_brulees || 0);
-  const remainingCalories = (summary?.tdee || 0) - calorieBalance;
+  const remainingCalories =
+    (summary?.calories_goal ?? 0) - (summary?.calories_consumed ?? 0);
 
 
   return (
@@ -68,8 +61,8 @@ const Index = () => {
             {summary && (
               <AdviceBanner
                 message={remainingCalories > 0
-                  ? `Il vous reste ${remainingCalories} calories à consommer pour atteindre votre objectif.`
-                  : `Vous avez dépassé votre objectif de ${Math.abs(remainingCalories)} calories.`}
+                  ? `Il vous reste ${Math.round(remainingCalories)} calories à consommer pour atteindre votre objectif.`
+                  : `Vous avez dépassé votre objectif de ${Math.abs(Math.round(remainingCalories))} calories.`}
                 type={remainingCalories > 0 ? "info" : "warning"}
               />
             )}
@@ -80,91 +73,56 @@ const Index = () => {
             {/* Dashboard Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <DashboardCard
-                title="Calories consommées"
-                value={summary ? Math.round(summary.calories_apportees) : 0}
-                subtitle={summary ? `/ ${Math.round(summary.tdee)} kcal` : undefined}
+                title="Calories"
+                value={summary?.calories_consumed ?? 0}
+                goal={summary?.calories_goal}
+                unit="kcal"
                 icon={<Flame className="h-4 w-4" />}
                 variant="calories"
                 loading={isLoading}
               />
-              
               <DashboardCard
-                title="Calories brûlées"
-                value={summary ? Math.round(summary.calories_brulees) : 0}
-                subtitle="kcal d'activité"
-                icon={<TrendingUp className="h-4 w-4" />}
+                title="Protéines"
+                value={summary?.proteins_consumed ?? 0}
+                goal={summary?.proteins_goal}
+                unit="g"
+                icon={<Drumstick className="h-4 w-4" />}
                 variant="protein"
                 loading={isLoading}
               />
-              
               <DashboardCard
-                title="Balance calorique"
-                value={calorieBalance > 0 ? `+${Math.round(calorieBalance)}` : Math.round(calorieBalance)}
-                subtitle="kcal net"
-                icon={<Target className="h-4 w-4" />}
-                variant={calorieBalance > 0 ? "carbs" : "fat"}
-                trend={calorieBalance > 0 ? "up" : "down"}
+                title="Glucides"
+                value={summary?.carbs_consumed ?? 0}
+                goal={summary?.carbs_goal}
+                unit="g"
+                icon={<Wheat className="h-4 w-4" />}
+                variant="carbs"
                 loading={isLoading}
               />
-              
-              {showHydration && (
-                <DashboardCard
-                  title="Hydratation"
-                  value="0/0"
-                  subtitle="verres d'eau"
-                  icon={<Droplet className="h-4 w-4" />}
-                  variant="default"
-                  loading={isLoading}
-                />
-              )}
+              <DashboardCard
+                title="Lipides"
+                value={summary?.fats_consumed ?? 0}
+                goal={summary?.fats_goal}
+                unit="g"
+                icon={<Egg className="h-4 w-4" />}
+                variant="fat"
+                loading={isLoading}
+              />
             </div>
 
             {/* Macros and Progress */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="shadow-soft">
-                <CardHeader>
-                  <CardTitle>Progression des macronutriments</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <MacroProgress
-                    protein={macrosData.protein}
-                    carbs={macrosData.carbs}
-                    fat={macrosData.fat}
-                  />
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-soft">
-                <CardHeader>
-                  <CardTitle>Résumé du jour</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">TDEE</span>
-                      <span className="text-sm font-medium">{summary ? Math.round(summary.tdee) : 0} kcal</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Objectif restant</span>
-                      <span className={`text-sm font-medium ${remainingCalories > 0 ? 'text-success' : 'text-warning'}`}>
-                        {remainingCalories > 0 ? remainingCalories : 0} kcal
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Efficacité</span>
-                      <span className="text-sm font-medium text-success">87%</span>
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    className="w-full bg-gradient-wellness hover:shadow-medium transition-all duration-300"
-                    onClick={() => toast({ title: "Rapport détaillé disponible bientôt" })}
-                  >
-                    Voir le rapport détaillé
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
+            <Card className="shadow-soft">
+              <CardHeader>
+                <CardTitle>Progression des macronutriments</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <MacroProgress
+                  protein={macrosData.protein}
+                  carbs={macrosData.carbs}
+                  fat={macrosData.fat}
+                />
+              </CardContent>
+            </Card>
           </main>
         </SidebarInset>
       </div>
