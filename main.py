@@ -43,10 +43,15 @@ Voir chaque endpoint pour le détail des paramètres et exemples.
     version="0.1.0",
 )
 
-# CORS (ici tout domaine, à restreindre en prod)
+# CORS (origines autorisées configurables)
+origins_env = os.getenv("CORS_ORIGINS")
+if origins_env:
+    allowed_origins = [o.strip() for o in origins_env.split(",") if o.strip()]
+else:
+    allowed_origins = ["http://localhost:8080"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
