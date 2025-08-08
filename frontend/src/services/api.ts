@@ -254,7 +254,11 @@ export interface ProductSummary {
 export interface IngredientItem {
   id?: string
   text?: string
-  [key: string]: any
+  vegan?: string
+  vegetarian?: string
+  from_palm_oil?: string
+  palm_oil?: string
+  [key: string]: unknown
 }
 
 export interface ProductDetails extends ProductSummary {

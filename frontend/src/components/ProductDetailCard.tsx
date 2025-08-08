@@ -1,6 +1,15 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { BadgeCheck, AlertCircle, Leaf, Milk, Wheat, Info } from "lucide-react";
+import {
+  BadgeCheck,
+  AlertCircle,
+  Leaf,
+  Milk,
+  Wheat,
+  Info,
+  Carrot,
+  TreePalm,
+} from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -14,9 +23,9 @@ interface ProductDetailCardProps {
 }
 
 export function ProductDetailCard({ product }: ProductDetailCardProps) {
-  if (!product) return null;
-
   const [openScore, setOpenScore] = useState<string | null>(null);
+
+  if (!product) return null;
 
   const labels = product.labels_tags?.split(",").filter(Boolean) ?? [];
   const allergens = product.allergens_tags?.split(",").filter(Boolean) ?? [];
@@ -80,15 +89,45 @@ export function ProductDetailCard({ product }: ProductDetailCardProps) {
       aria-label={`Détails produit ${product.name}`}
     >
       <div className="flex flex-col items-center gap-2">
-        {product.image_url && (
-          <img
-            src={product.image_url}
-            alt={product.name}
-            className="h-28 w-auto rounded-lg shadow"
-          />
-        )}
+        <div className="flex flex-wrap justify-center gap-2">
+          {product.image_front_url ? (
+            <img
+              src={product.image_front_url}
+              alt={`${product.name} - face avant`}
+              aria-label={`${product.name} face avant`}
+              className="h-28 w-auto rounded-lg shadow"
+            />
+          ) : (
+            product.image_url && (
+              <img
+                src={product.image_url}
+                alt={product.name}
+                aria-label={product.name}
+                className="h-28 w-auto rounded-lg shadow"
+              />
+            )
+          )}
+          {product.image_ingredients_url && (
+            <img
+              src={product.image_ingredients_url}
+              alt="Ingrédients"
+              aria-label="Image des ingrédients"
+              className="h-28 w-auto rounded-lg shadow"
+            />
+          )}
+          {product.image_nutrition_url && (
+            <img
+              src={product.image_nutrition_url}
+              alt="Infos nutritionnelles"
+              aria-label="Image des informations nutritionnelles"
+              className="h-28 w-auto rounded-lg shadow"
+            />
+          )}
+        </div>
         <h2 className="font-bold text-2xl mt-2 text-center">{product.name}</h2>
-        {product.brand && <div className="text-gray-600 text-base">{product.brand}</div>}
+        {product.brand && (
+          <div className="text-gray-600 text-base">{product.brand}</div>
+        )}
       </div>
 
       <div className="flex flex-wrap justify-between mt-4 mb-2 gap-x-6 gap-y-1 text-sm">
@@ -128,7 +167,9 @@ export function ProductDetailCard({ product }: ProductDetailCardProps) {
             {countries.map((c, i) => (
               <span
                 key={i}
-                className="inline-flex items-center gap-1 ml-2"
+                className={`inline-flex items-center gap-1 ml-2 ${
+                  c.includes("France") ? "text-green-600 font-semibold" : ""
+                }`}
                 aria-label={`Pays : ${c}`}
               >
                 <span>{getFlag(c)}</span>
@@ -178,43 +219,51 @@ export function ProductDetailCard({ product }: ProductDetailCardProps) {
       <TooltipProvider delayDuration={200}>
         <div className="flex gap-3 mt-4 items-center">
           {scores.map(
-            (s) =>
+            (s, i) =>
               s.value && (
-                <motion.button
-                  whileTap={{ scale: 0.92 }}
-                  whileHover={{ scale: 1.08 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                <Tooltip
                   key={s.type}
-                  className={`relative px-3 py-1 rounded-lg font-bold shadow-sm cursor-pointer ${s.color} focus:outline-blue-400`}
-                  aria-label={s.label}
-                  tabIndex={0}
-                  onMouseEnter={() => setOpenScore(s.type)}
-                  onMouseLeave={() => setOpenScore(null)}
-                  onFocus={() => setOpenScore(s.type)}
-                  onBlur={() => setOpenScore(null)}
-                  onClick={() => setOpenScore(openScore === s.type ? null : s.type)}
+                  open={openScore === s.type}
+                  onOpenChange={(o) => setOpenScore(o ? s.type : null)}
                 >
-                  {s.img ? (
-                    <img src={s.img} alt={s.label} className="h-7 inline" />
-                  ) : (
-                    s.value
-                  )}
-                  <span className="ml-1">{s.value}</span>
-                  {openScore === s.type && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 6 }}
-                      className="absolute left-1/2 -translate-x-1/2 top-12 z-10 min-w-[180px] bg-white border border-gray-200 text-gray-800 rounded-xl p-2 text-xs shadow-lg"
+                  <TooltipTrigger asChild>
+                    <motion.button
+                      initial={{ opacity: 0, scale: 0.6 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.1 * i }}
+                      whileTap={{ scale: 0.9 }}
+                      whileHover={{ scale: 1.05 }}
+                      className={`relative px-3 py-1 rounded-lg font-bold shadow-sm cursor-pointer ${s.color} focus:outline-blue-400`}
+                      aria-label={s.label}
+                      tabIndex={0}
+                      onClick={() =>
+                        setOpenScore(openScore === s.type ? null : s.type)
+                      }
                     >
-                      <div className="flex items-center gap-2 mb-1">
-                        <Info className="h-4 w-4 text-blue-400" />
-                        <b>{s.label}</b>
-                      </div>
-                      <div>{s.desc}</div>
-                    </motion.div>
-                  )}
-                </motion.button>
+                      {s.img ? (
+                        <img
+                          src={s.img}
+                          alt={s.label}
+                          aria-label={s.label}
+                          className="h-7 inline"
+                        />
+                      ) : (
+                        s.value
+                      )}
+                      <span className="ml-1">{s.value}</span>
+                    </motion.button>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    className="text-xs"
+                    side="top"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Info className="h-4 w-4 text-blue-400" />
+                      <b>{s.label}</b>
+                    </div>
+                    <div>{s.desc}</div>
+                  </TooltipContent>
+                </Tooltip>
               )
           )}
         </div>
@@ -272,10 +321,46 @@ export function ProductDetailCard({ product }: ProductDetailCardProps) {
             {product.ingredients_text_fr}
           </div>
           {Array.isArray(product.ingredients_list) && (
-            <ul className="list-disc ml-6 text-sm text-gray-600 mt-1">
-              {product.ingredients_list.map((ing, i) => (
-                <li key={i}>{typeof ing === "string" ? ing : ing.text}</li>
-              ))}
+            <ul className="list-disc ml-6 text-sm text-gray-600 mt-1 space-y-1">
+              {product.ingredients_list.map((ing, i) => {
+                const text = typeof ing === "string" ? ing : ing.text;
+                const vegan =
+                  typeof ing !== "string" && ing.vegan === "yes";
+                const vegetarian =
+                  typeof ing !== "string" && ing.vegetarian === "yes";
+                const palm =
+                  typeof ing !== "string" &&
+                  (ing.from_palm_oil === "yes" || ing.palm_oil === "yes");
+                return (
+                  <motion.li
+                    key={i}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.02 * i }}
+                    className="flex items-center gap-2"
+                  >
+                    <span>{text}</span>
+                    {vegan && (
+                      <Leaf
+                        className="h-4 w-4 text-green-600"
+                        aria-label="Vegan"
+                      />
+                    )}
+                    {vegetarian && (
+                      <Carrot
+                        className="h-4 w-4 text-green-600"
+                        aria-label="Végétarien"
+                      />
+                    )}
+                    {palm && (
+                      <TreePalm
+                        className="h-4 w-4 text-orange-600"
+                        aria-label="Contient huile de palme"
+                      />
+                    )}
+                  </motion.li>
+                );
+              })}
             </ul>
           )}
         </div>
