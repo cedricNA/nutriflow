@@ -499,3 +499,33 @@ def calculer_tdee(
     print(f"🏋️ Calories brûlées via sport : {calories_sport:.0f} kcal")
     print(f"📊 TDEE total journalier estimé : {tdee:.0f} kcal")
     return tdee
+
+
+def calculate_calorie_goal(tdee: Optional[float], objectif: Optional[str]) -> Optional[float]:
+    """Calcule l'objectif calorique selon l'objectif utilisateur."""
+    if tdee is None:
+        return None
+    obj = (objectif or "maintien").lower()
+    if obj == "perte":
+        goal = tdee - 500
+    elif obj == "prise":
+        goal = tdee + 300
+    else:
+        goal = tdee
+    return round(goal)
+
+
+def calculate_macro_goals(poids_kg: Optional[float], calories_goal: Optional[float]) -> Dict[str, Optional[float]]:
+    """Calcule les objectifs journaliers de protéines, lipides et glucides."""
+    if not poids_kg or not calories_goal:
+        return {"proteins": None, "carbs": None, "fats": None}
+
+    proteins = 1.6 * poids_kg
+    fats = calories_goal * 0.25 / 9
+    carbs = (calories_goal - proteins * 4 - fats * 9) / 4
+
+    return {
+        "proteins": round(proteins),
+        "carbs": round(carbs),
+        "fats": round(fats),
+    }

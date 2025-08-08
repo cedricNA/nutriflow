@@ -25,6 +25,7 @@ from nutriflow.api.router import (
     BMRResponse,
     TDEResponse,
     DailySummary,
+    DailyNutritionSummary,
     UserProfile,
     UserProfileUpdate,
 )
@@ -298,8 +299,15 @@ def test_tdee_unit():
 
 def test_daily_summary_unit():
     resp = router.daily_summary(date_str="2023-01-02")
-    assert isinstance(resp, DailySummary)
-    assert resp.date == "2023-01-02"
+    assert isinstance(resp, DailyNutritionSummary)
+    assert resp.calories_goal == 1800
+    assert resp.calories_consumed == 0
+    expected_prot = round(1.6 * SAMPLE_USER["poids_kg"])
+    expected_fat = round(1800 * 0.25 / 9)
+    expected_carb = round((1800 - expected_prot * 4 - expected_fat * 9) / 4)
+    assert resp.proteins_goal == expected_prot
+    assert resp.fats_goal == expected_fat
+    assert resp.carbs_goal == expected_carb
 
 
 def test_history_unit():
@@ -425,12 +433,14 @@ def test_daily_summary_integration_structure():
             assert all(
                 k in data
                 for k in (
-                    "date",
-                    "calories_apportees",
-                    "calories_brulees",
-                    "tdee",
-                    "balance_calorique",
-                    "conseil",
+                    "calories_consumed",
+                    "calories_goal",
+                    "proteins_consumed",
+                    "proteins_goal",
+                    "carbs_consumed",
+                    "carbs_goal",
+                    "fats_consumed",
+                    "fats_goal",
                 )
             )
 
