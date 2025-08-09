@@ -413,3 +413,57 @@ def aggregate_daily_summary(user_id: str, date: str):
 
     supabase.table("daily_summary").upsert(record).execute()
     return record
+
+
+def update_macro_objectives(user_id: str, date: str):
+    """Calcule et enregistre les objectifs journaliers de macronutriments.
+
+    Récupère le TDEE depuis ``daily_summary`` et l'objectif de l'utilisateur
+    (perte, maintien ou prise), puis applique les répartitions suivantes :
+
+    - perte : protéines 30 %, glucides 30 %, lipides 40 %
+    - maintien : protéines 25 %, glucides 50 %, lipides 25 %
+    - prise : protéines 30 %, glucides 50 %, lipides 20 %
+
+    Les valeurs sont converties en grammes et enregistrées dans la table
+    ``daily_summary`` (colonnes ``prot_obj``, ``gluc_obj``, ``lip_obj``).
+    """
+
+    supabase = get_supabase_client()
+
+    summary = get_daily_summary(user_id, date)
+    if not summary or summary.get("tdee") is None:
+        raise Exception("TDEE introuvable pour cette journée")
+
+    user = get_user(user_id)
+    if not user:
+        raise Exception("Utilisateur introuvable")
+
+    objectif = (user.get("goal") or user.get("objectif") or "maintien").lower()
+
+    if objectif == "perte":
+        prot_ratio, gluc_ratio, lip_ratio = 0.30, 0.30, 0.40
+    elif objectif == "prise":
+        prot_ratio, gluc_ratio, lip_ratio = 0.30, 0.50, 0.20
+    else:  # maintien
+        prot_ratio, gluc_ratio, lip_ratio = 0.25, 0.50, 0.25
+
+    tdee = summary["tdee"]
+
+    prot_obj = tdee * prot_ratio / 4
+    gluc_obj = tdee * gluc_ratio / 4
+    lip_obj = tdee * lip_ratio / 9
+
+    supabase.table("daily_summary").update(
+        {
+            "prot_obj": prot_obj,
+            "gluc_obj": gluc_obj,
+            "lip_obj": lip_obj,
+        }
+    ).eq("user_id", user_id).eq("date", date).execute()
+
+    return {
+        "prot_obj": prot_obj,
+        "gluc_obj": gluc_obj,
+        "lip_obj": lip_obj,
+    }
