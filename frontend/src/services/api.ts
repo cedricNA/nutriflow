@@ -25,10 +25,35 @@ export interface UserProfile {
   taille_cm: number;
   age: number;
   sexe: string;
+  activity_factor: number;
+  goal: string;
+  tdee_base: number;
+  tdee: number;
 }
 
 export async function fetchUserProfile(): Promise<UserProfile> {
   const res = await fetch('http://localhost:8000/api/user/profile');
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Erreur API ${res.status}: ${text}`);
+  }
+  return (await res.json()) as UserProfile;
+}
+
+export interface UserProfileUpdate {
+  poids_kg: number;
+  taille_cm: number;
+  age: number;
+  sexe: string;
+  goal: string;
+}
+
+export async function updateUserProfile(data: UserProfileUpdate): Promise<UserProfile> {
+  const res = await fetch('http://localhost:8000/api/user/profile/update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Erreur API ${res.status}: ${text}`);
