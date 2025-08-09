@@ -120,10 +120,6 @@ def mock_router(monkeypatch):
     monkeypatch.setattr(router, "calculer_tdee", lambda p, t, a, s, cs: 1800.0)
 
     # Mock Supabase insertion functions
-    monkeypatch.setattr(router, "insert_meal", lambda *args, **kwargs: "fake-meal-id")
-    monkeypatch.setattr(
-        router, "insert_meal_item", lambda *args, **kwargs: "fake-meal-item-id"
-    )
     monkeypatch.setattr(
         router, "insert_activity", lambda *args, **kwargs: "fake-activity-id"
     )
@@ -213,8 +209,6 @@ def test_ingredients_reuses_existing_meal(monkeypatch):
         record["meal_id"] = kwargs.get("meal_id") or args[0]
         return "item-id"
 
-    monkeypatch.setattr(router, "insert_meal", fake_insert_meal)
-    monkeypatch.setattr(router, "insert_meal_item", fake_insert_meal_item)
     monkeypatch.setattr(db, "insert_meal", fake_insert_meal)
     monkeypatch.setattr(db, "insert_meal_item", fake_insert_meal_item)
 

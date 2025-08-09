@@ -6,6 +6,9 @@ import asyncio
 import inspect
 from typing import List, Dict, Optional
 from fastapi import HTTPException
+from datetime import date
+
+import nutriflow.db.supabase as db
 
 # Retrieve Nutritionix credentials from environment variables
 APP_ID = os.getenv("NUTRIFLOW_NUTRITIONIX_APP_ID")
@@ -529,3 +532,49 @@ def calculate_macro_goals(poids_kg: Optional[float], calories_goal: Optional[flo
         "carbs": round(carbs),
         "fats": round(fats),
     }
+
+
+def add_meal_item(
+    user_id: str,
+    date_str: Optional[str],
+    meal_type: str,
+    item_data: Dict,
+) -> Dict:
+    """Ajoute un aliment à un repas et met à jour le résumé quotidien."""
+
+    ds = date_str or date.today().isoformat()
+
+    meals = db.get_meals(user_id, ds)
+    meal_id = None
+    for m in meals:
+        if m.get("type") == meal_type:
+            meal_id = m.get("id")
+            break
+    if not meal_id:
+        meal_id = db.insert_meal(user_id, ds, meal_type, note="")
+
+    def _zero(val):
+        return val if val is not None else 0
+
+    data = {
+        "nom_aliment": item_data.get("nom_aliment"),
+        "marque": item_data.get("marque"),
+        "quantite": item_data.get("quantite"),
+        "unite": item_data.get("unite"),
+        "calories": _zero(item_data.get("calories")),
+        "proteines_g": _zero(item_data.get("proteines_g")),
+        "glucides_g": _zero(item_data.get("glucides_g")),
+        "lipides_g": _zero(item_data.get("lipides_g")),
+        "barcode": item_data.get("barcode"),
+        "source": item_data.get("source"),
+    }
+
+    item_id = db.insert_meal_item(meal_id=meal_id, **data)
+    item = {"id": item_id, "meal_id": meal_id, **data}
+
+    try:
+        db.aggregate_daily_summary(user_id, ds)
+    except Exception as e:
+        print(f"Erreur recalcul daily_summary: {e}")
+
+    return item
