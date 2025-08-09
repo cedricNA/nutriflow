@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navigation = [
+export const navigation = [
   { title: "Dashboard", url: "/", icon: Home },
   { title: "Repas", url: "/meals", icon: UtensilsCrossed },
   { title: "Activités", url: "/activities", icon: Activity },
@@ -20,7 +20,7 @@ const navigation = [
 
 export function AppSidebar() {
   return (
-    <aside className="w-56 bg-white border-r border-gray-200 p-4 flex flex-col gap-4">
+    <aside className="hidden md:flex w-56 bg-white border-r border-gray-200 p-4 flex-col gap-4">
       <div className="flex items-center gap-2 mb-4">
         <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
           <UtensilsCrossed
