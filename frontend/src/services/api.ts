@@ -254,6 +254,12 @@ export interface DailySummary {
   carbs_goal?: number;
   fats_consumed?: number;
   fats_goal?: number;
+  prot_tot?: number;
+  prot_obj?: number;
+  gluc_tot?: number;
+  gluc_obj?: number;
+  lip_tot?: number;
+  lip_obj?: number;
 }
 
 export async function fetchDailySummary(date: string): Promise<DailySummary> {
