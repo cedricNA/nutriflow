@@ -3,7 +3,7 @@ import {
   Home,
   UtensilsCrossed,
   Activity,
-  Calendar,
+  History,
   Settings,
   TrendingUp,
 } from "lucide-react";
@@ -13,7 +13,7 @@ export const navigation = [
   { title: "Dashboard", url: "/", icon: Home },
   { title: "Repas", url: "/meals", icon: UtensilsCrossed },
   { title: "Activités", url: "/activities", icon: Activity },
-  { title: "Historique", url: "/history", icon: Calendar },
+  { title: "Historique", url: "/history", icon: History },
   { title: "Statistiques", url: "/stats", icon: TrendingUp },
   { title: "Paramètres", url: "/settings", icon: Settings },
 ];
