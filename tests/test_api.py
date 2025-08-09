@@ -73,6 +73,10 @@ SAMPLE_USER = {
     "taille_cm": 175.0,
     "age": 30,
     "sexe": "male",
+    "activity_factor": 1.2,
+    "goal": "maintien",
+    "tdee_base": 1800.0,
+    "tdee": 1800.0,
 }
 
 
@@ -117,7 +121,7 @@ def mock_router(monkeypatch):
         router, "analyze_exercise_nutritionix", lambda **kwargs: SAMPLE_EXERCISES
     )
     monkeypatch.setattr(router, "calculer_bmr", lambda p, t, a, s: 1500.0)
-    monkeypatch.setattr(router, "calculer_tdee", lambda p, t, a, s, cs: 1800.0)
+    monkeypatch.setattr(router, "calculer_tdee", lambda p, t, a, s, af: 1500.0 * af)
 
     # Mock Supabase insertion functions
     monkeypatch.setattr(
@@ -283,11 +287,19 @@ def test_bmr_unit():
 
 
 def test_tdee_unit():
-    q = TDEEQuery(poids_kg=70, taille_cm=175, age=30, sexe="male", calories_sport=200)
+    q = TDEEQuery(
+        poids_kg=70,
+        taille_cm=175,
+        age=30,
+        sexe="male",
+        activity_factor=1.2,
+        goal="maintien",
+    )
     resp = router.tdee(q)
     assert isinstance(resp, TDEResponse)
     assert resp.bmr == 1500.0
-    assert resp.calories_sport == 200
+    assert resp.activity_factor == 1.2
+    assert resp.tdee_base == 1800.0
     assert resp.tdee == 1800.0
 
 
@@ -314,6 +326,8 @@ def test_get_user_profile_unit():
     resp = router.get_user_profile()
     assert isinstance(resp, UserProfile)
     assert resp.poids_kg == SAMPLE_USER["poids_kg"]
+    assert resp.goal == SAMPLE_USER["goal"]
+    assert resp.tdee == SAMPLE_USER["tdee"]
 
 
 def test_update_user_profile_unit():
@@ -321,6 +335,8 @@ def test_update_user_profile_unit():
     resp = router.update_user_profile(q)
     assert isinstance(resp, UserProfile)
     assert resp.poids_kg == 72.0
+    assert resp.tdee_base == 1800.0
+    assert resp.tdee == 1800.0
 
 
 # ----- Integration Tests (structure only) -----

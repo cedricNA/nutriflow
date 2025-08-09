@@ -490,18 +490,27 @@ def calculer_bmr(poids_kg: float, taille_cm: float, age: int, sexe: str) -> floa
 
 
 def calculer_tdee(
-    poids_kg: float, taille_cm: float, age: int, sexe: str, calories_sport: float = 0.0
+    poids_kg: float, taille_cm: float, age: int, sexe: str, facteur_activite: float
 ) -> float:
     """
-    Calcule le TDEE = BMR + calories_sportives.
-    Affiche un résumé clair des valeurs.
+    Calcule le TDEE de base = BMR * facteur d'activité.
     """
     bmr = calculer_bmr(poids_kg, taille_cm, age, sexe)
-    tdee = bmr + calories_sport
+    tdee_base = bmr * facteur_activite
     print(f"🧬 BMR (Métabolisme de base) : {bmr:.0f} kcal")
-    print(f"🏋️ Calories brûlées via sport : {calories_sport:.0f} kcal")
-    print(f"📊 TDEE total journalier estimé : {tdee:.0f} kcal")
-    return tdee
+    print(f"⚙️ Facteur d'activité : {facteur_activite}")
+    print(f"📊 TDEE de base estimé : {tdee_base:.0f} kcal")
+    return tdee_base
+
+
+def ajuster_tdee(tdee_base: float, goal: str) -> float:
+    """Ajuste le TDEE en fonction de l'objectif (perte, maintien, prise)."""
+    g = (goal or "maintien").lower()
+    if g == "perte":
+        return tdee_base * 0.8
+    if g == "prise":
+        return tdee_base * 1.15
+    return tdee_base
 
 
 def calculate_calorie_goal(tdee: Optional[float], objectif: Optional[str]) -> Optional[float]:
