@@ -9,9 +9,9 @@ import { AddMealModal } from "./AddMealModal";
 import { AddActivityModal } from "./AddActivityModal";
 import { ScanProductModal } from "./ScanProductModal";
 
-interface QuickActionsProps {}
+type QuickActionsProps = Record<string, never>;
 
-export const QuickActions = ({}: QuickActionsProps) => {
+export const QuickActions = (_props: QuickActionsProps) => {
   const [addMealOpen, setAddMealOpen] = useState(false);
   const [addActivityOpen, setAddActivityOpen] = useState(false);
   const [scanProductOpen, setScanProductOpen] = useState(false);
