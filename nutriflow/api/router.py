@@ -10,6 +10,7 @@ from nutriflow.db.supabase import (
     get_meal,
 )
 import nutriflow.db.supabase as db
+from backend.services.daily_summary import update_daily_summary
 
 # ID utilisateur générique pour les tests/démo (doit être un UUID valide)
 TEST_USER_ID = "00000000-0000-0000-0000-000000000000"
@@ -420,14 +421,16 @@ def exercise(data: ExerciseQuery, preview: bool = False):
         if not preview:
             # ===== Sauvegarde des activités dans Supabase =====
             user_id = TEST_USER_ID
+            date_str = str(date.today())
             for ex in exercises_raw:
                 insert_activity(
                     user_id=user_id,
-                    date=str(date.today()),
+                    date=date_str,
                     description=ex.get("name", ""),
                     duree_min=ex.get("duration_min", 0),
                     calories_brulees=ex.get("nf_calories", 0),
                 )
+            update_daily_summary(user_id=user_id, date=date_str)
             # ===== Fin sauvegarde =====
         results = [
             ExerciseResult(
