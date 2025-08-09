@@ -4,9 +4,9 @@ import { BottomNav } from "@/components/BottomNav";
 import { DashboardCard } from "@/components/DashboardCard";
 import { MacroProgress } from "@/components/MacroProgress";
 import { QuickActions } from "@/components/QuickActions";
-import { AdviceBanner } from "@/components/AdviceBanner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Flame, Drumstick, Wheat, Egg } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Flame, Drumstick, Wheat, Egg, Info as InfoIcon } from "lucide-react";
 import { useDailySummary } from "@/hooks/use-daily-summary";
 import heroImage from "@/assets/nutriflow-hero.jpg";
 
@@ -53,14 +53,34 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Advice Banner */}
+            {/* Message sur les calories restantes */}
             {summary && (
-              <AdviceBanner
-                message={remainingCalories > 0
-                  ? `Il vous reste ${Math.round(remainingCalories)} calories à consommer pour atteindre votre objectif.`
-                  : `Vous avez dépassé votre objectif de ${Math.abs(Math.round(remainingCalories))} calories.`}
-                type={remainingCalories > 0 ? "info" : "warning"}
-              />
+              <div className="flex items-center bg-gray-100 border border-gray-200 p-2 rounded-md text-gray-800 font-medium">
+                <p>
+                  {remainingCalories > 0
+                    ? `Il vous reste ${Math.round(remainingCalories)} calories à consommer pour atteindre votre objectif.`
+                    : `Vous avez dépassé votre objectif de ${Math.abs(Math.round(remainingCalories))} calories.`}
+                </p>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <InfoIcon className="w-4 h-4 ml-2 cursor-pointer text-gray-500" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs text-sm leading-snug">
+                    <p><strong>Pourquoi ce chiffre ?</strong></p>
+                    <p>Il s’agit du nombre de calories qu’il vous reste à consommer aujourd’hui pour atteindre votre objectif (perte de poids, maintien ou prise de masse).</p>
+                    <ul className="mt-1 list-disc list-inside">
+                      <li>Votre objectif nutritionnel</li>
+                      <li>Votre TDEE (dépense journalière)</li>
+                      <li>Les aliments consommés</li>
+                      <li>Les calories brûlées</li>
+                    </ul>
+                    <p className="mt-1">
+                      ✅ Si le chiffre est négatif, vous avez dépassé votre objectif.<br />
+                      ✅ S’il reste des calories, vous pouvez encore manger.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             )}
 
             {/* Quick Actions */}
