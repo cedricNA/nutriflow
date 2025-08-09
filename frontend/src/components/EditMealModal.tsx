@@ -19,6 +19,13 @@ interface EditMealModalProps {
 
 type EditableItem = MealItem & { tempId?: string };
 
+interface UpdateMealPayload {
+  type: string;
+  add: { nom_aliment: string; quantite: number; unite: string }[];
+  update: { id: string; nom_aliment: string; quantite: number; unite: string }[];
+  delete?: string[];
+}
+
 export const EditMealModal = ({ meal, open, onOpenChange, onUpdated }: EditMealModalProps) => {
   const { toast } = useToast();
   const [mealType, setMealType] = useState<string>("");
@@ -53,7 +60,7 @@ export const EditMealModal = ({ meal, open, onOpenChange, onUpdated }: EditMealM
 
   const handleSave = async () => {
     if (!meal) return;
-    const payload: any = {
+    const payload: UpdateMealPayload = {
       type: mealType,
       add: items.filter((i) => !i.id).map(({ nom_aliment, quantite, unite }) => ({ nom_aliment, quantite, unite })),
       update: items.filter((i) => i.id).map(({ id, nom_aliment, quantite, unite }) => ({ id: id!, nom_aliment, quantite, unite })),
