@@ -6,7 +6,7 @@ import asyncio
 import inspect
 from typing import List, Dict, Optional
 from fastapi import HTTPException
-from datetime import date
+from datetime import date, datetime
 
 import nutriflow.db.supabase as db
 
@@ -534,6 +534,60 @@ def calculate_macro_goals(poids_kg: Optional[float], calories_goal: Optional[flo
     }
 
 
+def update_daily_summary(user_id: str, date: date) -> Dict:
+    """Agrège repas et activités d'une journée et met à jour `daily_summary`."""
+
+    date_str = date if isinstance(date, str) else date.isoformat()
+
+    try:
+        meals = db.get_meals(user_id, date_str)
+        num_meals = len(meals)
+        calories_apportees = prot_tot = gluc_tot = lip_tot = 0.0
+        for meal in meals:
+            items = db.get_meal_items(meal.get("id"))
+            for it in items:
+                calories_apportees += it.get("calories", 0) or 0
+                prot_tot += it.get("proteines_g", 0) or 0
+                gluc_tot += it.get("glucides_g", 0) or 0
+                lip_tot += it.get("lipides_g", 0) or 0
+
+        activities = db.get_activities(user_id, date_str)
+        num_activities = len(activities)
+        calories_brulees = sum(a.get("calories_brulees", 0) or 0 for a in activities)
+        total_sport = sum(a.get("duree_min", 0) or 0 for a in activities)
+
+        user = db.get_user(user_id) or {}
+        tdee = user.get("tdee", 2000.0) if user.get("tdee") is not None else 2000.0
+
+        balance_calorique = calories_apportees - tdee
+        total_calories = calories_apportees + calories_brulees
+        has_data = bool(num_meals or num_activities)
+
+        record = {
+            "user_id": user_id,
+            "date": date_str,
+            "calories_apportees": calories_apportees,
+            "calories_brulees": calories_brulees,
+            "prot_tot": prot_tot,
+            "gluc_tot": gluc_tot,
+            "lip_tot": lip_tot,
+            "balance_calorique": balance_calorique,
+            "total_calories": total_calories,
+            "total_sport": total_sport,
+            "num_meals": num_meals,
+            "num_activities": num_activities,
+            "has_data": has_data,
+            "last_updated": datetime.utcnow().isoformat(),
+        }
+
+        supabase = db.get_supabase_client()
+        supabase.table("daily_summary").upsert(record).execute()
+    except Exception:
+        # En cas d'erreur, on n'interrompt pas le flux principal
+        pass
+    return record
+
+
 def add_meal_item(
     user_id: str,
     date_str: Optional[str],
@@ -573,7 +627,7 @@ def add_meal_item(
     item = {"id": item_id, "meal_id": meal_id, **data}
 
     try:
-        db.aggregate_daily_summary(user_id, ds)
+        update_daily_summary(user_id, ds)
     except Exception as e:
         print(f"Erreur recalcul daily_summary: {e}")
 
