@@ -10,7 +10,6 @@ from nutriflow.db.supabase import (
     get_meal,
 )
 import nutriflow.db.supabase as db
-from backend.services.daily_summary import update_daily_summary
 
 # ID utilisateur générique pour les tests/démo (doit être un UUID valide)
 TEST_USER_ID = "00000000-0000-0000-0000-000000000000"
@@ -32,6 +31,7 @@ from nutriflow.services import (
     get_unit_variants,
     normalize_units_text,
     add_meal_item,
+    update_daily_summary,
 )
 
 router = APIRouter()
@@ -523,6 +523,24 @@ def daily_summary(
         fats_consumed=fat_cons,
         fats_goal=macros_goal.get("fats"),
     )
+
+
+@router.post("/daily-summary/update")
+def recalc_daily_summary(
+    date_str: str = Query(default=None, description="Date au format YYYY-MM-DD"),
+):
+    """Recalcule et enregistre le bilan quotidien pour la date donnée."""
+    user_id = TEST_USER_ID
+    d = date.fromisoformat(date_str) if date_str else date.today()
+    try:
+        return update_daily_summary(user_id=user_id, date=d)
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=503,
+            detail="Erreur lors de la mise à jour du bilan journalier",
+        )
 
 
 @router.get("/history", response_model=List[DailySummary])
