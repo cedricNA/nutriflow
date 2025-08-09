@@ -190,6 +190,42 @@ def mock_router(monkeypatch):
     monkeypatch.setattr(db, "update_meal", lambda *args, **kwargs: None)
     monkeypatch.setattr(db, "get_product", lambda *a, **k: SAMPLE_PRODUCT)
 
+    class DummyClient:
+        def table(self, *args, **kwargs):
+            return self
+
+        def select(self, *args, **kwargs):
+            return self
+
+        def eq(self, *args, **kwargs):
+            return self
+
+        def update(self, *args, **kwargs):
+            return self
+
+        def insert(self, *args, **kwargs):
+            return self
+
+        def upsert(self, *args, **kwargs):
+            return self
+
+        def order(self, *args, **kwargs):
+            return self
+
+        def limit(self, *args, **kwargs):
+            return self
+
+        def delete(self, *args, **kwargs):
+            return self
+
+        def execute(self):
+            class R:
+                data = []
+
+            return R()
+
+    monkeypatch.setattr(db, "get_supabase_client", lambda: DummyClient())
+
 
 # ----- Unit Tests -----
 
@@ -330,13 +366,43 @@ def test_get_user_profile_unit():
     assert resp.tdee == SAMPLE_USER["tdee"]
 
 
-def test_update_user_profile_unit():
+def test_update_user_profile_unit(monkeypatch):
+    recorded = {}
+
+    class DummyClient:
+        def table(self, *args, **kwargs):
+            return self
+
+        def select(self, *args, **kwargs):
+            return self
+
+        def eq(self, *args, **kwargs):
+            return self
+
+        def insert(self, data):
+            recorded["insert"] = data
+            return self
+
+        def update(self, data):
+            recorded["update"] = data
+            return self
+
+        def execute(self):
+            class R:
+                data = []
+
+            return R()
+
+    monkeypatch.setattr(db, "get_supabase_client", lambda: DummyClient())
+
     q = UserProfileUpdate(poids_kg=72.0)
     resp = router.update_user_profile(q)
     assert isinstance(resp, UserProfile)
     assert resp.poids_kg == 72.0
     assert resp.tdee_base == 1800.0
     assert resp.tdee == 1800.0
+    assert recorded["insert"]["bmr"] == 1500.0
+    assert recorded["insert"]["tdee"] == 1500.0 * 1.55
 
 
 # ----- Integration Tests (structure only) -----
