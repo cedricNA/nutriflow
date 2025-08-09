@@ -6,8 +6,6 @@ from typing import List, Dict, Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from nutriflow.db.supabase import (
-    insert_meal,
-    insert_meal_item,
     insert_activity,
     get_meal,
 )
@@ -32,6 +30,7 @@ from nutriflow.services import (
     SPORTS_MAPPING,
     get_unit_variants,
     normalize_units_text,
+    add_meal_item,
 )
 
 router = APIRouter()
@@ -64,6 +63,9 @@ class IngredientQuery(BaseModel):
         "dejeuner",
         description="Type de repas (petit_dejeuner, dejeuner, diner, collation)",
     )
+    date_str: Optional[str] = Field(
+        None, description="Date YYYY-MM-DD pour enregistrer le repas"
+    )
 
 
 
@@ -84,6 +86,13 @@ class BarcodeQueryUserInput(BaseModel):
         ..., pattern=r"^\d{8,}$", description="Code-barres du produit (au moins 8 chiffres)"
     )
     quantity: float = Field(..., gt=0, description="Quantité du produit (g)")
+    type: str = Field(
+        "dejeuner",
+        description="Type de repas (petit_dejeuner, dejeuner, diner, collation)",
+    )
+    date_str: Optional[str] = Field(
+        None, description="Date YYYY-MM-DD pour enregistrer le repas"
+    )
 
 
 class ExerciseQuery(BaseModel):
@@ -269,30 +278,25 @@ def ingredients(data: IngredientQuery):
             for _, row in df.iterrows()
         ]
 
-        # === AJOUT SAUVEGARDE DANS SUPABASE ===
+        # === AJOUT DANS SUPABASE ===
         user_id = TEST_USER_ID  # ID générique en l'absence d'utilisateur connecté
-        today = str(date.today())
-        meal_id = None
-        meals = db.get_meals(user_id, today)
-        for m in meals:
-            if m.get("type") == data.type:
-                meal_id = m.get("id")
-                break
-        if not meal_id:
-            meal_id = insert_meal(user_id, today, data.type, note="")
         for food in foods:
-            insert_meal_item(
-                meal_id=meal_id,
-                nom_aliment=food.aliment,
-                marque=None,
-                quantite=food.poids_g,
-                unite="g",
-                calories=food.calories,
-                proteines_g=food.proteines_g,
-                glucides_g=food.glucides_g,
-                lipides_g=food.lipides_g,
-                barcode=None,
-                source="manual",
+            add_meal_item(
+                user_id=user_id,
+                date_str=data.date_str,
+                meal_type=data.type,
+                item_data={
+                    "nom_aliment": food.aliment,
+                    "marque": None,
+                    "quantite": food.poids_g,
+                    "unite": "g",
+                    "calories": food.calories,
+                    "proteines_g": food.proteines_g,
+                    "glucides_g": food.glucides_g,
+                    "lipides_g": food.lipides_g,
+                    "barcode": None,
+                    "source": "manual",
+                },
             )
         # === FIN SAUVEGARDE ===
 
@@ -320,32 +324,28 @@ def barcode(data: BarcodeQueryUserInput):
     ).execute()
     # === Fin upsert automatique ===
 
-    # ===== Recherche/Création du repas =====
     user_id = TEST_USER_ID
-    today = str(date.today())
-    meals = db.get_meals(user_id, today)
-    if meals:
-        meal_id = meals[0]["id"]
-    else:
-        meal_id = insert_meal(user_id, today, "dejeuner", note="")
-
-    # ===== Insertion de l'aliment =====
     qty = data.quantity
+
     def _mul(val):
         return (val or 0) * qty / 100.0
 
-    insert_meal_item(
-        meal_id=meal_id,
-        nom_aliment=prod["name"],
-        marque=prod.get("brand"),
-        quantite=qty,
-        unite="g",
-        calories=_mul(prod.get("energy_kcal_per_100g")),
-        proteines_g=_mul(prod.get("proteins_per_100g")),
-        glucides_g=_mul(prod.get("carbs_per_100g")),
-        lipides_g=_mul(prod.get("fat_per_100g")),
-        barcode=data.barcode,
-        source="openfoodfacts",
+    add_meal_item(
+        user_id=user_id,
+        date_str=data.date_str,
+        meal_type=data.type,
+        item_data={
+            "nom_aliment": prod["name"],
+            "marque": prod.get("brand"),
+            "quantite": qty,
+            "unite": "g",
+            "calories": _mul(prod.get("energy_kcal_per_100g")),
+            "proteines_g": _mul(prod.get("proteins_per_100g")),
+            "glucides_g": _mul(prod.get("carbs_per_100g")),
+            "lipides_g": _mul(prod.get("fat_per_100g")),
+            "barcode": data.barcode,
+            "source": "openfoodfacts",
+        },
     )
 
     return OFFProduct(
@@ -599,20 +599,29 @@ def list_meals(
 @router.patch("/meals/{meal_id}")
 def edit_meal(meal_id: str, payload: MealPatchPayload):
     """Ajoute, met à jour ou supprime des ingrédients d'un repas."""
+    meal = get_meal(meal_id) or {"id": meal_id, "user_id": TEST_USER_ID}
+    user_id = meal.get("user_id", TEST_USER_ID)
+    meal_type = meal.get("type")
+    meal_date = meal.get("date")
+
     meal_data = {}
     if payload.type is not None:
         meal_data["type"] = payload.type
+        meal_type = payload.type
     if payload.date is not None:
         meal_data["date"] = payload.date
+        meal_date = payload.date
     if meal_data:
         db.update_meal(meal_id, meal_data)
+
     if payload.add:
         for item in payload.add:
             analysed = _analyze_item(item.nom_aliment, item.quantite, item.unite)
-            db.insert_meal_item(
-                meal_id=meal_id,
-                source="manual",
-                **analysed,
+            add_meal_item(
+                user_id=user_id,
+                date_str=meal_date,
+                meal_type=meal_type,
+                item_data={**analysed, "source": "manual"},
             )
     if payload.update:
         for item in payload.update:
