@@ -15,9 +15,18 @@ const Index = () => {
   const { data: summary, isLoading } = useDailySummary(today);
 
   const macrosData = {
-    protein: { current: summary?.proteins_consumed ?? 0, target: summary?.proteins_goal },
-    carbs: { current: summary?.carbs_consumed ?? 0, target: summary?.carbs_goal },
-    fat: { current: summary?.fats_consumed ?? 0, target: summary?.fats_goal },
+    protein: {
+      current: summary?.prot_tot ?? summary?.proteins_consumed ?? 0,
+      target: summary?.prot_obj ?? summary?.proteins_goal,
+    },
+    carbs: {
+      current: summary?.gluc_tot ?? summary?.carbs_consumed ?? 0,
+      target: summary?.gluc_obj ?? summary?.carbs_goal,
+    },
+    fat: {
+      current: summary?.lip_tot ?? summary?.fats_consumed ?? 0,
+      target: summary?.lip_obj ?? summary?.fats_goal,
+    },
   };
 
   const remainingCalories =
