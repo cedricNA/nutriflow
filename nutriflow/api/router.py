@@ -637,6 +637,38 @@ def update_user_profile(data: UserProfileUpdate, user_id: str = TEST_USER_ID):
         temp_user.get("activity_factor", 1.2),
     )
     tdee_adj = ajuster_tdee(tdee_base, temp_user.get("goal", "maintien"))
+    # Nouveau calcul pour le daily_summary
+    daily_tdee = bmr * 1.55
+    objectif = (temp_user.get("goal") or "maintien").lower()
+    if objectif == "perte":
+        daily_tdee -= 500
+    elif objectif == "prise":
+        daily_tdee += 300
+    try:
+        supabase = db.get_supabase_client()
+        today = date.today().isoformat()
+        existing = (
+            supabase.table("daily_summary")
+            .select("user_id")
+            .eq("user_id", user_id)
+            .eq("date", today)
+            .execute()
+        )
+        payload = {"bmr": bmr, "tdee": daily_tdee}
+        if existing.data:
+            (
+                supabase.table("daily_summary")
+                .update(payload)
+                .eq("user_id", user_id)
+                .eq("date", today)
+                .execute()
+            )
+        else:
+            supabase.table("daily_summary").insert(
+                {"user_id": user_id, "date": today, **payload}
+            ).execute()
+    except Exception:
+        pass
     maj["tdee_base"] = tdee_base
     maj["tdee"] = tdee_adj
 
