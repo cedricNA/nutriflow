@@ -25,6 +25,7 @@ from nutriflow.services import (
     calculate_totals,
     calculer_bmr,
     calculer_tdee,
+    ajuster_tdee,
     calculate_calorie_goal,
     calculate_macro_goals,
     SPORTS_MAPPING,
@@ -120,7 +121,13 @@ class BMRQuery(BaseModel):
 
 
 class TDEEQuery(BMRQuery):
-    calories_sport: float = Field(0.0, ge=0, description="Calories brûlées via sport")
+    activity_factor: float = Field(
+        ..., gt=0, description="Facteur d'activité (ex: 1.2 sédentaire)"
+    )
+    goal: str = Field(
+        "maintien",
+        description="Objectif : perte, maintien ou prise de masse",
+    )
 
 
 # ----- User Profile Models -----
@@ -129,6 +136,10 @@ class UserProfile(BaseModel):
     taille_cm: float
     age: int
     sexe: str
+    activity_factor: float
+    goal: str
+    tdee_base: float
+    tdee: float
 
 
 class UserProfileUpdate(BaseModel):
@@ -136,6 +147,8 @@ class UserProfileUpdate(BaseModel):
     taille_cm: Optional[float] = None
     age: Optional[int] = None
     sexe: Optional[str] = None
+    activity_factor: Optional[float] = None
+    goal: Optional[str] = None
 
 
 # ----- Meal Editing Models -----
@@ -229,9 +242,10 @@ class BMRResponse(BaseModel):
 
 class TDEResponse(BaseModel):
     bmr: float = Field(..., description="Métabolisme de base calculé (kcal)")
-    calories_sport: float = Field(..., description="Calories brûlées via sport (kcal)")
+    activity_factor: float = Field(..., description="Facteur d'activité utilisé")
+    tdee_base: float = Field(..., description="TDEE de base (kcal)")
     tdee: float = Field(
-        ..., description="Total Daily Energy Expenditure calculé (kcal)"
+        ..., description="TDEE ajusté selon l'objectif (kcal)"
     )
 
 
@@ -466,15 +480,19 @@ def bmr(data: BMRQuery):
 @router.post("/tdee", response_model=TDEResponse)
 def tdee(data: TDEEQuery):
     """
-    Calcule le TDEE (BMR + calories sportives).
+    Calcule le TDEE de base et ajusté selon l'objectif.
     """
     try:
-        tdee_value = calculer_tdee(
-            data.poids_kg, data.taille_cm, data.age, data.sexe, data.calories_sport
-        )
         bmr_value = calculer_bmr(data.poids_kg, data.taille_cm, data.age, data.sexe)
+        tdee_base = calculer_tdee(
+            data.poids_kg, data.taille_cm, data.age, data.sexe, data.activity_factor
+        )
+        tdee_adj = ajuster_tdee(tdee_base, data.goal)
         return TDEResponse(
-            bmr=bmr_value, calories_sport=data.calories_sport, tdee=tdee_value
+            bmr=bmr_value,
+            activity_factor=data.activity_factor,
+            tdee_base=tdee_base,
+            tdee=tdee_adj,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -504,13 +522,18 @@ def daily_summary(
         )
 
     try:
-        tdee_val = calculer_tdee(
-            user["poids_kg"], user["taille_cm"], user["age"], user["sexe"], 0.0
+        tdee_base = calculer_tdee(
+            user["poids_kg"],
+            user["taille_cm"],
+            user["age"],
+            user["sexe"],
+            user.get("activity_factor", 1.2),
         )
+        tdee_val = ajuster_tdee(tdee_base, user.get("goal", "maintien"))
     except Exception:
         tdee_val = None
 
-    cal_goal = calculate_calorie_goal(tdee_val, user.get("objectif", "maintien"))
+    cal_goal = tdee_val
     macros_goal = calculate_macro_goals(user.get("poids_kg"), cal_goal)
 
     return DailyNutritionSummary(
@@ -573,6 +596,10 @@ def get_user_profile(user_id: str = TEST_USER_ID):
         taille_cm=user["taille_cm"],
         age=user["age"],
         sexe=user["sexe"],
+        activity_factor=user.get("activity_factor", 1.2),
+        goal=user.get("goal", "maintien"),
+        tdee_base=user.get("tdee_base", 0.0),
+        tdee=user.get("tdee", 0.0),
     )
 
 
@@ -590,6 +617,29 @@ def update_user_profile(data: UserProfileUpdate, user_id: str = TEST_USER_ID):
         maj["age"] = data.age
     if data.sexe is not None:
         maj["sexe"] = data.sexe
+    if data.activity_factor is not None:
+        maj["activity_factor"] = data.activity_factor
+    if data.goal is not None:
+        maj["goal"] = data.goal
+
+    temp_user = {**user, **maj}
+    bmr = calculer_bmr(
+        temp_user["poids_kg"],
+        temp_user["taille_cm"],
+        temp_user["age"],
+        temp_user["sexe"],
+    )
+    tdee_base = calculer_tdee(
+        temp_user["poids_kg"],
+        temp_user["taille_cm"],
+        temp_user["age"],
+        temp_user["sexe"],
+        temp_user.get("activity_factor", 1.2),
+    )
+    tdee_adj = ajuster_tdee(tdee_base, temp_user.get("goal", "maintien"))
+    maj["tdee_base"] = tdee_base
+    maj["tdee"] = tdee_adj
+
     if maj:
         db.update_user(user_id, maj)
         user.update(maj)
@@ -598,6 +648,10 @@ def update_user_profile(data: UserProfileUpdate, user_id: str = TEST_USER_ID):
         taille_cm=user["taille_cm"],
         age=user["age"],
         sexe=user["sexe"],
+        activity_factor=user.get("activity_factor", 1.2),
+        goal=user.get("goal", "maintien"),
+        tdee_base=user.get("tdee_base", 0.0),
+        tdee=user.get("tdee", 0.0),
     )
 
 

@@ -354,18 +354,24 @@ def aggregate_daily_summary(user_id: str, date: str):
     if not user:
         raise Exception("Utilisateur non trouvé")
 
-    from nutriflow.services import calculer_bmr, calculer_tdee
+    from nutriflow.services import calculer_bmr, calculer_tdee, ajuster_tdee
 
     bmr = calculer_bmr(user["poids_kg"], user["taille_cm"], user["age"], user["sexe"])
-    tdee = calculer_tdee(
-        user["poids_kg"], user["taille_cm"], user["age"], user["sexe"], calories_brulees
+    tdee_base = calculer_tdee(
+        user["poids_kg"],
+        user["taille_cm"],
+        user["age"],
+        user["sexe"],
+        user.get("activity_factor", 1.2),
     )
+    tdee_user = ajuster_tdee(tdee_base, user.get("goal") or user.get("objectif", "maintien"))
+    tdee = tdee_user + calories_brulees
 
     # 4. Balance calorique
     balance = total_calories - tdee
 
     # 5. Conseil personnalisé selon l'objectif
-    objectif = user.get("objectif", "maintien")
+    objectif = user.get("goal") or user.get("objectif", "maintien")
     if objectif == "perte":
         if balance < -300:
             conseil = "Déficit important, perte de poids rapide possible."
