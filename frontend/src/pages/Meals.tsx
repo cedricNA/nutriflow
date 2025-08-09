@@ -1,4 +1,5 @@
 import { AppSidebar } from "@/components/AppSidebar";
+import { BottomNav } from "@/components/BottomNav";
 import { MealList } from "@/components/MealList";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -18,10 +19,11 @@ const Meals = () => (
           </Button>
         </div>
       </header>
-      <main className="flex-1 space-y-6 p-6">
+      <main className="flex-1 space-y-6 p-6 pb-24 md:pb-6">
         <MealList />
       </main>
     </div>
+    <BottomNav />
   </div>
 );
 

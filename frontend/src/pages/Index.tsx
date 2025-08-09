@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { AppSidebar } from "@/components/AppSidebar";
+import { BottomNav } from "@/components/BottomNav";
 import { DashboardCard } from "@/components/DashboardCard";
 import { MacroProgress } from "@/components/MacroProgress";
 import { QuickActions } from "@/components/QuickActions";
@@ -36,7 +37,7 @@ const Index = () => {
           </div>
         </header>
 
-        <main className="flex-1 space-y-6 p-6">
+        <main className="flex-1 space-y-6 p-6 pb-24 md:pb-6">
             {/* Hero Section */}
             <div className="relative overflow-hidden rounded-xl shadow-strong">
               <img 
@@ -120,6 +121,7 @@ const Index = () => {
             </Card>
         </main>
       </div>
+      <BottomNav />
     </div>
   );
 };
