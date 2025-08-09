@@ -13,13 +13,16 @@ import {
   fetchDailySummary,
   type Meal,
 } from "@/services/api";
+import { useSearchParams } from "react-router-dom";
 import { EditMealModal } from "./EditMealModal";
 import { AddMealModal } from "./AddMealModal";
 
 export const MealList = () => {
   const { toast } = useToast();
   const today = format(new Date(), "yyyy-MM-dd");
-  const [selectedDate, setSelectedDate] = useState<string>(today);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialDate = searchParams.get("date_str") || today;
+  const [selectedDate, setSelectedDate] = useState<string>(initialDate);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
   const [addMealOpen, setAddMealOpen] = useState(false);
@@ -45,6 +48,19 @@ export const MealList = () => {
   useEffect(() => {
     loadMeals();
   }, [selectedDate]);
+
+  useEffect(() => {
+    const param = searchParams.get("date_str");
+    if (param && param !== selectedDate) {
+      setSelectedDate(param);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (searchParams.get("date_str") !== selectedDate) {
+      setSearchParams({ date_str: selectedDate });
+    }
+  }, [selectedDate, searchParams, setSearchParams]);
 
   const handleDeleteMeal = async (mealId: string) => {
     if (!confirm("Supprimer ce repas ?")) return;
@@ -102,6 +118,7 @@ export const MealList = () => {
           if (!o) setAddMealType(undefined);
         }}
         defaultType={addMealType}
+        date={selectedDate}
         onAdded={() => {
           loadMeals();
           queryClient.invalidateQueries({

@@ -56,19 +56,27 @@ export async function fetchUnits(): Promise<UnitMapping> {
   return (await res.json()) as UnitMapping;
 }
 
-export async function analyzeIngredients(input: string, mealType: string): Promise<NutritionixResponse> {
-  console.log('Données envoyées :', { query: input, type: mealType });
-  const res = await fetch('http://localhost:8000/api/ingredients', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: input, type: mealType })
+export async function analyzeIngredients(
+  input: string,
+  mealType: string,
+  date?: string
+): Promise<NutritionixResponse> {
+  console.log("Données envoyées :", {
+    query: input,
+    type: mealType,
+    date_str: date,
+  });
+  const res = await fetch("http://localhost:8000/api/ingredients", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query: input, type: mealType, date_str: date }),
   });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Erreur API ${res.status}: ${text}`);
   }
   const data = (await res.json()) as NutritionixResponse;
-  console.log('Réponse reçue :', data);
+  console.log("Réponse reçue :", data);
   return data;
 }
 
@@ -94,7 +102,9 @@ export interface Meal {
 }
 
 export async function fetchMeals(date: string): Promise<Meal[]> {
-  const res = await fetch(`http://localhost:8000/api/meals?date=${date}`);
+  const res = await fetch(
+    `http://localhost:8000/api/meals?date_str=${date}`
+  );
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Erreur API ${res.status}: ${text}`);
