@@ -22,6 +22,8 @@ interface AddMealModalProps {
   onOpenChange: (open: boolean) => void;
   /** Type de repas pré-sélectionné lors de l'ouverture */
   defaultType?: string;
+  /** Date du repas au format YYYY-MM-DD */
+  date?: string;
   /** Callback appelé après l'ajout réussi d'un repas */
   onAdded?: () => void;
 }
@@ -30,6 +32,7 @@ export const AddMealModal = ({
   open,
   onOpenChange,
   defaultType,
+  date,
   onAdded,
 }: AddMealModalProps) => {
   const { toast } = useToast();
@@ -99,7 +102,7 @@ export const AddMealModal = ({
       .join(", ");
 
     try {
-      const result = await analyzeIngredients(query, mealType);
+      const result = await analyzeIngredients(query, mealType, date);
       setTotals(result.totals);
       console.log("Résumé nutritionnel :", result.totals);
       toast({
