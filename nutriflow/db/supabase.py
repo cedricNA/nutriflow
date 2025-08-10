@@ -415,7 +415,7 @@ def aggregate_daily_summary(user_id: str, date: str):
     try:
         supabase.table("daily_summary").select(
             "target_calories,target_proteins_g,target_fats_g,target_carbs_g"
-        ).limit(1).execute()
+        ).limit(0).execute()
         from nutriflow.api.router import compute_goals
 
         goals = compute_goals(user, tdee)

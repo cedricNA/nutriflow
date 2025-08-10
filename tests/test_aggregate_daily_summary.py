@@ -7,6 +7,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 import nutriflow.db.supabase as db
 import nutriflow.services as services
+import nutriflow.api.router as router
 
 SAMPLE_USER = {
     "poids_kg": 70.0,
@@ -90,3 +91,40 @@ def test_aggregate_meals_with_activity(common_patches, monkeypatch):
     assert res["calories_brulees"] == 200
     assert res["tdee"] == 2000.0
     assert inserted and inserted[0]["gluc_tot"] == 100.0
+
+
+def test_aggregate_with_targets(monkeypatch):
+    inserted = []
+
+    class TableWithCols(DummyTable):
+        def select(self, _):
+            return self
+
+        def limit(self, _):
+            return self
+
+    class ClientWithCols(DummyClient):
+        def table(self, _):
+            return TableWithCols(self.store)
+
+    monkeypatch.setattr(db, "get_supabase_client", lambda: ClientWithCols(inserted))
+    monkeypatch.setattr(db, "get_user", lambda uid: SAMPLE_USER)
+    monkeypatch.setattr(services, "calculer_bmr", lambda p, t, a, s: 1500.0)
+    monkeypatch.setattr(services, "calculer_tdee", lambda p, t, a, s, af: 1500.0 * af)
+    monkeypatch.setattr(db, "get_daily_nutrition", lambda u, d: {
+        "total_calories": 500.0,
+        "total_proteins_g": 25.0,
+        "total_carbs_g": 60.0,
+        "total_fats_g": 15.0,
+    })
+    monkeypatch.setattr(db, "get_activities", lambda u, d: [])
+    monkeypatch.setattr(router, "compute_goals", lambda u, t: {
+        "target_kcal": 1800.0,
+        "prot_g": 120.0,
+        "fat_g": 60.0,
+        "carbs_g": 180.0,
+    })
+
+    res = db.aggregate_daily_summary("u", "2023-01-04")
+    assert res["target_calories"] == 1800.0
+    assert inserted and inserted[0]["target_proteins_g"] == 120.0
