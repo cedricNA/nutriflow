@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import Index from '../Index';
-import { vi } from 'vitest';
+import { vi, type Mock } from 'vitest';
 vi.mock('@/components/AppSidebar', () => ({ AppSidebar: () => <div /> }));
 vi.mock('@/components/BottomNav', () => ({ BottomNav: () => <div /> }));
 
@@ -30,6 +30,8 @@ vi.mock('@/api/nutriflow', () => ({
   })),
 }));
 
+import { getUserProfile, getDailySummary } from '@/api/nutriflow';
+
 function renderWithClient(ui: React.ReactElement) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -46,7 +48,7 @@ describe('Dashboard', () => {
         matches: false,
         addEventListener: () => {},
         removeEventListener: () => {},
-      } as any;
+      } as unknown as MediaQueryList;
     };
   });
 
@@ -63,5 +65,20 @@ describe('Dashboard', () => {
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
     fireEvent.keyDown(document, { key: 'Escape', code: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('affiche les données même si le profil utilisateur est absent', async () => {
+    (getUserProfile as Mock).mockResolvedValueOnce(undefined);
+    renderWithClient(<Index />);
+    expect(await screen.findByText(/Objectif : Indéfini/i)).toBeInTheDocument();
+    expect(screen.getByText(/Il vous reste 1500 kcal/i)).toBeInTheDocument();
+  });
+
+  it("affiche un message d'erreur si le résumé du jour échoue", async () => {
+    (getDailySummary as Mock).mockRejectedValueOnce(new Error('fail'));
+    renderWithClient(<Index />);
+    expect(
+      await screen.findByText(/Erreur lors du chargement des données du dashboard/i)
+    ).toBeInTheDocument();
   });
 });

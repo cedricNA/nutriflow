@@ -27,7 +27,7 @@ const goalLabels: Record<string, string> = {
 };
 
 const Index = () => {
-  const { data } = useDashboardData();
+  const { data, error } = useDashboardData();
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
 
@@ -37,9 +37,10 @@ const Index = () => {
   const tdeeTarget = Math.round(data?.targetCalories ?? 0);
   const goalLabel = profile ? goalLabels[profile.goal ?? ''] ?? profile.goal ?? 'Indéfini' : 'Indéfini';
 
-  const macroLine = summary && (summary.target_proteins_g || summary.target_carbs_g || summary.target_fats_g)
-    ? `Protéines : ${summary.target_proteins_g ?? 0} g • Glucides : ${summary.target_carbs_g ?? 0} g • Lipides : ${summary.target_fats_g ?? 0} g`
-    : undefined;
+  const macroLine =
+    summary && (summary.target_proteins_g || summary.target_carbs_g || summary.target_fats_g)
+      ? `Protéines : ${summary.target_proteins_g ?? 0} g • Glucides : ${summary.target_carbs_g ?? 0} g • Lipides : ${summary.target_fats_g ?? 0} g`
+      : undefined;
 
   const dialogContent = (
     <div id="day-ref-content" className="space-y-2">
@@ -53,7 +54,7 @@ const Index = () => {
       {macroLine && <p>{macroLine}</p>}
       <ul className="list-disc list-inside text-sm">
         <li>Le solde = Apports − TDEE</li>
-        <li>Objectif en cours : {goalLabel}</li>
+        <li>Objectif en cours : {goalLabel}</li>
       </ul>
       <p className="text-xs text-muted-foreground">Formule BMR Mifflin-St Jeor. Adaptation TDEE selon objectif.</p>
     </div>
@@ -91,6 +92,12 @@ const Index = () => {
               </div>
             </div>
           </div>
+
+          {error && (
+            <div role="alert" className="rounded-md bg-red-100 p-4 text-red-800">
+              Erreur lors du chargement des données du dashboard.
+            </div>
+          )}
 
           {data && (
             <section className="space-y-4">
