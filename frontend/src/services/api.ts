@@ -245,6 +245,31 @@ export async function deleteActivity(activityId: string): Promise<void> {
   }
 }
 
+export interface GoalRatios {
+  prot_pct: number;
+  fat_pct: number;
+  carbs_pct: number;
+}
+
+export interface Goals {
+  target_kcal: number;
+  prot_g: number;
+  fat_g: number;
+  carbs_g: number;
+  ratios: GoalRatios;
+  tdee: number;
+  objectif: string;
+}
+
+export async function fetchGoals(): Promise<Goals> {
+  const res = await fetch('http://localhost:8000/api/user/goals');
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Erreur API ${res.status}: ${text}`);
+  }
+  return (await res.json()) as Goals;
+}
+
 export interface DailySummary {
   calories_consumed?: number;
   calories_goal?: number;
