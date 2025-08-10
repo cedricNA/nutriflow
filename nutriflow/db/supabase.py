@@ -106,6 +106,13 @@ def get_meal_items(meal_id):
     return response.data or []
 
 
+def get_meal_item(item_id):
+    """Récupère un aliment d'un repas par son identifiant."""
+    supabase = get_supabase_client()
+    response = supabase.table("meal_items").select("*").eq("id", item_id).execute()
+    return response.data[0] if response.data else None
+
+
 def get_meal(meal_id):
     """Récupère un repas par son identifiant."""
     supabase = get_supabase_client()
