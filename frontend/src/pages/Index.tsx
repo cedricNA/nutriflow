@@ -6,6 +6,10 @@ import { Info as InfoIcon } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet';
 import { useDashboardData } from '@/hooks/use-dashboard-data';
+import { QuickActions } from '@/components/QuickActions';
+import { MacroProgress } from '@/components/MacroProgress';
+import { DashboardCard } from '@/components/DashboardCard';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
@@ -27,7 +31,7 @@ const goalLabels: Record<string, string> = {
 };
 
 const Index = () => {
-  const { data, error } = useDashboardData();
+  const { data, error, isLoading } = useDashboardData();
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
 
@@ -36,6 +40,15 @@ const Index = () => {
   const remaining = Math.round(data?.remainingCalories ?? 0);
   const tdeeTarget = Math.round(data?.targetCalories ?? 0);
   const goalLabel = profile ? goalLabels[profile.goal ?? ''] ?? profile.goal ?? 'Indéfini' : 'Indéfini';
+
+  const caloriesConsumed = summary?.calories_consumed ?? 0;
+  const caloriesGoal = summary?.calories_goal ?? 0;
+
+  const macros = {
+    protein: { current: summary?.proteins_consumed ?? 0, target: summary?.proteins_goal },
+    carbs: { current: summary?.carbs_consumed ?? 0, target: summary?.carbs_goal },
+    fat: { current: summary?.fats_consumed ?? 0, target: summary?.fats_goal },
+  };
 
   const macroLine =
     summary && (summary.proteins_goal || summary.carbs_goal || summary.fats_goal)
@@ -99,56 +112,91 @@ const Index = () => {
             </div>
           )}
 
-          {data && (
-            <section className="space-y-4">
-              <div className="rounded-md bg-white p-4 shadow">
-                <p className="text-lg font-semibold">Objectif : {goalLabel}</p>
-                <p className="text-sm text-gray-600">TDEE cible du jour : {tdeeTarget} kcal</p>
+          <section className="space-y-4">
+            {isLoading ? (
+              <div className="space-y-4">
+                <div className="rounded-md bg-white p-4 shadow">
+                  <Skeleton className="h-6 w-1/3" />
+                  <Skeleton className="h-4 w-1/4 mt-2" />
+                </div>
+                <Skeleton className="h-14 w-full" />
               </div>
+            ) : (
+              <>
+                <div className="rounded-md bg-white p-4 shadow">
+                  <p className="text-lg font-semibold">Objectif : {goalLabel}</p>
+                  <p className="text-sm text-gray-600">TDEE cible du jour : {tdeeTarget} kcal</p>
+                </div>
 
-              <div className="flex items-center bg-gray-50 border border-gray-300 p-3 rounded-md text-base text-gray-900">
-                <span>
-                  {remaining >= 0
-                    ? `Il vous reste ${remaining} kcal`
-                    : `Vous avez dépassé l'objectif de ${Math.abs(remaining)} kcal`}
-                </span>
-                {isMobile ? (
-                  <Sheet open={open} onOpenChange={setOpen}>
-                    <SheetTrigger asChild>{InfoTrigger}</SheetTrigger>
-                    <SheetContent
-                      side="bottom"
-                      className="pb-10"
-                      id="day-ref-popover"
-                      aria-labelledby="day-ref-title"
-                      aria-describedby="day-ref-content"
-                    >
-                      <h3 id="day-ref-title" className="text-lg font-semibold mb-2">
-                        Références du jour
-                      </h3>
-                      {dialogContent}
-                    </SheetContent>
-                  </Sheet>
-                ) : (
-                  <Popover open={open} onOpenChange={setOpen} modal>
-                    <PopoverTrigger asChild>{InfoTrigger}</PopoverTrigger>
-                    <PopoverContent
-                      id="day-ref-popover"
-                      role="dialog"
-                      aria-modal="true"
-                      aria-labelledby="day-ref-title"
-                      aria-describedby="day-ref-content"
-                      className="w-80 p-4"
-                    >
-                      <h3 id="day-ref-title" className="text-lg font-semibold mb-2">
-                        Références du jour
-                      </h3>
-                      {dialogContent}
-                    </PopoverContent>
-                  </Popover>
-                )}
+                <div className="flex items-center bg-gray-50 border border-gray-300 p-3 rounded-md text-base text-gray-900">
+                  <span>
+                    {remaining >= 0
+                      ? `Il vous reste ${remaining} kcal`
+                      : `Vous avez dépassé l'objectif de ${Math.abs(remaining)} kcal`}
+                  </span>
+                  {isMobile ? (
+                    <Sheet open={open} onOpenChange={setOpen}>
+                      <SheetTrigger asChild>{InfoTrigger}</SheetTrigger>
+                      <SheetContent
+                        side="bottom"
+                        className="pb-10"
+                        id="day-ref-popover"
+                        aria-labelledby="day-ref-title"
+                        aria-describedby="day-ref-content"
+                      >
+                        <h3 id="day-ref-title" className="text-lg font-semibold mb-2">
+                          Références du jour
+                        </h3>
+                        {dialogContent}
+                      </SheetContent>
+                    </Sheet>
+                  ) : (
+                    <Popover open={open} onOpenChange={setOpen} modal>
+                      <PopoverTrigger asChild>{InfoTrigger}</PopoverTrigger>
+                      <PopoverContent
+                        id="day-ref-popover"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="day-ref-title"
+                        aria-describedby="day-ref-content"
+                        className="w-80 p-4"
+                      >
+                        <h3 id="day-ref-title" className="text-lg font-semibold mb-2">
+                          Références du jour
+                        </h3>
+                        {dialogContent}
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
+              </>
+            )}
+          </section>
+
+          <section className="flex flex-col gap-4">
+            <QuickActions />
+            {isLoading ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                <Skeleton className="h-40 w-full" />
+                <Skeleton className="h-40 w-full" />
               </div>
-            </section>
-          )}
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                <DashboardCard
+                  title="Calories consommées"
+                  value={caloriesConsumed}
+                  goal={caloriesGoal}
+                  unit="kcal"
+                  variant="calories"
+                />
+                <MacroProgress
+                  protein={macros.protein}
+                  carbs={macros.carbs}
+                  fat={macros.fat}
+                />
+              </div>
+            )}
+          </section>
         </main>
       </div>
       <BottomNav />
