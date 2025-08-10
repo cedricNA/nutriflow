@@ -573,11 +573,18 @@ def generate_conseil(objectif: str, balance: float) -> str:
 def update_daily_summary(user_id: str, date: Optional[str] = None) -> Dict:
     """Agrège repas et activités d'une journée et met à jour `daily_summary`."""
 
+    print(f"update_daily_summary appelé avec user_id={user_id}, date={date}")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id requis")
+
     date_str = date if date else dt_date.today().isoformat()
+    if not date_str:
+        raise HTTPException(status_code=400, detail="date requise")
 
     try:
         meals = db.get_meals(user_id, date_str)
         num_meals = len(meals)
+        print(f"Repas trouvés pour {date_str}: {meals}")
         calories_apportees = prot_tot = gluc_tot = lip_tot = 0.0
         for meal in meals:
             items = db.get_meal_items(meal.get("id"))
@@ -589,6 +596,7 @@ def update_daily_summary(user_id: str, date: Optional[str] = None) -> Dict:
 
         activities = db.get_activities(user_id, date_str)
         num_activities = len(activities)
+        print(f"Activités trouvées pour {date_str}: {activities}")
         calories_brulees = sum(a.get("calories_brulees", 0) or 0 for a in activities)
         total_sport = sum(a.get("duree_min", 0) or 0 for a in activities)
 
@@ -658,14 +666,29 @@ def update_daily_summary(user_id: str, date: Optional[str] = None) -> Dict:
         }
 
         supabase = db.get_supabase_client()
-        supabase.table("daily_summary").upsert(
-            record, on_conflict=["user_id", "date"]
-        ).execute()
+        response = (
+            supabase.table("daily_summary").upsert(
+                record, on_conflict=["user_id", "date"]
+            ).execute()
+        )
+        print(f"Réponse upsert daily_summary: {response}")
+        if getattr(response, "error", None):
+            raise HTTPException(
+                status_code=500,
+                detail=str(response.error),
+            )
+        if getattr(response, "data", None) is None:
+            raise HTTPException(
+                status_code=500,
+                detail="Upsert daily_summary n'a renvoyé aucune donnée",
+            )
         print(f"📝 daily_summary mis à jour pour {user_id} le {date_str}")
-    except Exception:
-        # En cas d'erreur, on n'interrompt pas le flux principal
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erreur update_daily_summary: {e}")
         return {}
-    return record
+    return response.data[0] if getattr(response, "data", None) else record
 
 
 def add_meal_item(
