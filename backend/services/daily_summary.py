@@ -1,6 +1,6 @@
 def update_daily_summary(user_id: str, date: str):
     """
-    Met à jour les champs calories_brulees, total_sport, balance_calorique
+    Met à jour les champs calories_burned, sport_total, calorie_balance
     dans la table daily_summary pour un user_id et une date donnée.
     """
     from nutriflow.db.supabase import get_supabase_client
@@ -30,13 +30,13 @@ def update_daily_summary(user_id: str, date: str):
         summary = summary_resp.data[0] if summary_resp.data else None
 
         if summary:
-            calories_apportees = summary.get("calories_apportees", 0)
+            calories_apportees = summary.get("calories_consumed", 0)
             new_balance = calories_apportees - total_kcal
 
             supabase.table("daily_summary").update({
-                "calories_brulees": total_kcal,
-                "total_sport": total_duree,
-                "balance_calorique": new_balance
+                "calories_burned": total_kcal,
+                "sport_total": total_duree,
+                "calorie_balance": new_balance
             }).eq("user_id", user_id).eq("date", date).execute()
     except Exception:
         # En cas d'erreur (ex: Supabase inaccessible), on ignore pour ne pas bloquer l'application

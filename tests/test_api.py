@@ -142,14 +142,14 @@ def mock_router(monkeypatch):
         "aggregate_daily_summary",
         lambda *args, **kwargs: {
             "date": args[1] if len(args) > 1 else kwargs.get("date"),
-            "calories_apportees": 2000.0,
-            "calories_brulees": 300.0,
+            "calories_consumed": 2000.0,
+            "calories_burned": 300.0,
             "tdee": 1800.0,
-            "balance_calorique": 200.0,
-            "conseil": "test",
-            "prot_tot": 0.0,
-            "gluc_tot": 0.0,
-            "lip_tot": 0.0,
+            "calorie_balance": 200.0,
+            "goal_feedback": "test",
+            "proteins_consumed": 0.0,
+            "carbs_consumed": 0.0,
+            "fats_consumed": 0.0,
         },
     )
     monkeypatch.setattr(
@@ -158,11 +158,11 @@ def mock_router(monkeypatch):
         lambda *args, **kwargs: [
             {
                 "date": "2023-01-01",
-                "calories_apportees": 2000.0,
-                "calories_brulees": 300.0,
+                "calories_consumed": 2000.0,
+                "calories_burned": 300.0,
                 "tdee": 1800.0,
-                "balance_calorique": 200.0,
-                "conseil": "test",
+                "calorie_balance": 200.0,
+                "goal_feedback": "test",
             }
         ],
     )
@@ -536,11 +536,11 @@ def test_history_integration_structure():
                 k in first
                 for k in (
                     "date",
-                    "calories_apportees",
-                    "calories_brulees",
+                    "calories_consumed",
+                    "calories_burned",
                     "tdee",
-                    "balance_calorique",
-                    "conseil",
+                    "calorie_balance",
+                    "goal_feedback",
                 )
             )
 

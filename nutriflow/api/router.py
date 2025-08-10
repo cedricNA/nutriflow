@@ -287,11 +287,11 @@ class TDEResponse(BaseModel):
 
 class DailySummary(BaseModel):
     date: str
-    calories_apportees: float
-    calories_brulees: float
+    calories_consumed: float
+    calories_burned: float
     tdee: float
-    balance_calorique: float
-    conseil: str
+    calorie_balance: float
+    goal_feedback: str
 
 
 class DailyNutritionSummary(BaseModel):
@@ -678,11 +678,11 @@ def get_history(
     return [
         DailySummary(
             date=rec["date"],
-            calories_apportees=rec.get("calories_apportees", 0),
-            calories_brulees=rec.get("calories_brulees", 0),
+            calories_consumed=rec.get("calories_consumed", 0),
+            calories_burned=rec.get("calories_burned", 0),
             tdee=rec.get("tdee", 0),
-            balance_calorique=rec.get("balance_calorique", 0),
-            conseil=rec.get("conseil", ""),
+            calorie_balance=rec.get("calorie_balance", 0),
+            goal_feedback=rec.get("goal_feedback", ""),
         )
         for rec in recs
     ]

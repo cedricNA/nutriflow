@@ -61,8 +61,8 @@ def test_daily_summary_meal_activity(monkeypatch):
     services.update_daily_summary("u1", "2024-01-01")
     assert store, "daily_summary not upserted"
     rec = store[0]
-    assert rec["calories_apportees"] == 500.0
-    assert rec["calories_brulees"] == 200.0
+    assert rec["calories_consumed"] == 500.0
+    assert rec["calories_burned"] == 200.0
     assert rec["num_meals"] == 1
     assert rec["num_activities"] == 1
     assert rec["target_calories"] == 2000.0

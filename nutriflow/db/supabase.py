@@ -260,10 +260,10 @@ def insert_daily_summary(
     user_id,
     date,
     tdee,
-    calories_apportees,
-    calories_brulees,
-    balance_calorique,
-    conseil,
+    calories_consumed,
+    calories_burned,
+    calorie_balance,
+    goal_feedback,
 ):
     supabase = get_supabase_client()
     response = (
@@ -273,10 +273,10 @@ def insert_daily_summary(
                 "user_id": user_id,
                 "date": date,
                 "tdee": tdee,
-                "calories_apportees": calories_apportees,
-                "calories_brulees": calories_brulees,
-                "balance_calorique": balance_calorique,
-                "conseil": conseil,
+                "calories_consumed": calories_consumed,
+                "calories_burned": calories_burned,
+                "calorie_balance": calorie_balance,
+                "goal_feedback": goal_feedback,
             }
         )
         .execute()
@@ -290,10 +290,10 @@ def update_daily_summary(
     user_id,
     date,
     tdee,
-    calories_apportees,
-    calories_brulees,
-    balance_calorique,
-    conseil,
+    calories_consumed,
+    calories_burned,
+    calorie_balance,
+    goal_feedback,
 ):
     supabase = get_supabase_client()
     response = (
@@ -301,10 +301,10 @@ def update_daily_summary(
         .update(
             {
                 "tdee": tdee,
-                "calories_apportees": calories_apportees,
-                "calories_brulees": calories_brulees,
-                "balance_calorique": balance_calorique,
-                "conseil": conseil,
+                "calories_consumed": calories_consumed,
+                "calories_burned": calories_burned,
+                "calorie_balance": calorie_balance,
+                "goal_feedback": goal_feedback,
             }
         )
         .eq("user_id", user_id)
@@ -408,14 +408,14 @@ def aggregate_daily_summary(user_id: str, date: str):
     record = {
         "user_id": user_id,
         "date": date,
-        "calories_apportees": total_calories,
-        "calories_brulees": calories_brulees,
-        "prot_tot": prot_tot,
-        "gluc_tot": gluc_tot,
-        "lip_tot": lip_tot,
+        "calories_consumed": total_calories,
+        "calories_burned": calories_brulees,
+        "proteins_consumed": prot_tot,
+        "carbs_consumed": gluc_tot,
+        "fats_consumed": lip_tot,
         "tdee": tdee,
-        "balance_calorique": balance,
-        "conseil": conseil,
+        "calorie_balance": balance,
+        "goal_feedback": conseil,
     }
 
     # Ajout des objectifs personnalisés si les colonnes existent
@@ -456,7 +456,7 @@ def update_macro_objectives(user_id: str, date: str):
     - prise : protéines 30 %, glucides 50 %, lipides 20 %
 
     Les valeurs sont converties en grammes et enregistrées dans la table
-    ``daily_summary`` (colonnes ``prot_obj``, ``gluc_obj``, ``lip_obj``).
+    ``daily_summary`` (colonnes ``target_proteins_g``, ``target_carbs_g``, ``target_fats_g``).
     """
 
     supabase = get_supabase_client()
@@ -486,14 +486,14 @@ def update_macro_objectives(user_id: str, date: str):
 
     supabase.table("daily_summary").update(
         {
-            "prot_obj": prot_obj,
-            "gluc_obj": gluc_obj,
-            "lip_obj": lip_obj,
+            "target_proteins_g": prot_obj,
+            "target_carbs_g": gluc_obj,
+            "target_fats_g": lip_obj,
         }
     ).eq("user_id", user_id).eq("date", date).execute()
 
     return {
-        "prot_obj": prot_obj,
-        "gluc_obj": gluc_obj,
-        "lip_obj": lip_obj,
+        "target_proteins_g": prot_obj,
+        "target_carbs_g": gluc_obj,
+        "target_fats_g": lip_obj,
     }
