@@ -12,7 +12,9 @@ export function useDashboardData() {
   return useQuery<DashboardData>({
     queryKey: ['dashboard-data'],
     queryFn: async () => {
+
       const profile = await getUserProfile();
+
       const summary = await getDailySummary();
       const target = summary.target_calories ?? summary.tdee ?? 0;
       const remaining = target - (summary.calories_apportees ?? 0);
