@@ -566,11 +566,49 @@ def update_daily_summary(user_id: str, date: date) -> Dict:
         total_sport = sum(a.get("duree_min", 0) or 0 for a in activities)
 
         user = db.get_user(user_id) or {}
-        tdee = user.get("tdee", 2000.0) if user.get("tdee") is not None else 2000.0
+        try:
+            tdee_base = calculer_tdee(
+                user.get("poids_kg", 0),
+                user.get("taille_cm", 0),
+                user.get("age", 0),
+                user.get("sexe", "male"),
+                user.get("activity_factor", 1.2),
+            )
+            tdee_user = ajuster_tdee(tdee_base, user.get("goal") or user.get("objectif"))
+        except Exception:
+            tdee_user = user.get("tdee", 2000.0) or 2000.0
+        tdee = tdee_user + calories_brulees
 
         balance_calorique = calories_apportees - tdee
         total_calories = calories_apportees + calories_brulees
         has_data = bool(num_meals or num_activities)
+
+        objectif = (user.get("goal") or user.get("objectif") or "maintien").lower()
+        if objectif == "perte":
+            if balance_calorique < -300:
+                conseil = "Déficit important, perte de poids rapide possible."
+            elif balance_calorique < 0:
+                conseil = "Déficit modéré, bonne trajectoire pour perdre du poids."
+            elif balance_calorique < 150:
+                conseil = "Attention, vous êtes en léger surplus."
+            else:
+                conseil = "Surplus, risque de prise de poids."
+        elif objectif == "prise":
+            if balance_calorique > 300:
+                conseil = "Surplus optimal pour prise de masse."
+            elif balance_calorique > 0:
+                conseil = "Surplus léger, progression possible mais lente."
+            elif balance_calorique > -150:
+                conseil = "Attention, vous êtes presque à l’équilibre."
+            else:
+                conseil = "Déficit, trop faible pour prise de masse."
+        else:  # maintien
+            if abs(balance_calorique) < 150:
+                conseil = "Maintien calorique atteint."
+            elif balance_calorique < 0:
+                conseil = "Léger déficit, surveillez si ce n’est pas souhaité."
+            else:
+                conseil = "Léger surplus, surveillez si ce n’est pas souhaité."
 
         record = {
             "user_id": user_id,
@@ -580,7 +618,9 @@ def update_daily_summary(user_id: str, date: date) -> Dict:
             "prot_tot": prot_tot,
             "gluc_tot": gluc_tot,
             "lip_tot": lip_tot,
+            "tdee": tdee,
             "balance_calorique": balance_calorique,
+            "conseil": conseil,
             "total_calories": total_calories,
             "total_sport": total_sport,
             "num_meals": num_meals,
@@ -590,10 +630,18 @@ def update_daily_summary(user_id: str, date: date) -> Dict:
         }
 
         supabase = db.get_supabase_client()
-        # Utilise on_conflict pour éviter la création de doublons lorsque
-        # la ligne existe déjà pour la même date.
+        existing = (
+            supabase.table("daily_summary")
+            .select("*")
+            .eq("user_id", user_id)
+            .eq("date", date_str)
+            .execute()
+        )
+        current = existing.data[0] if existing.data else {}
+        payload = {**current, **record}
+
         supabase.table("daily_summary").upsert(
-            record, on_conflict=["user_id", "date"]
+            payload, on_conflict=["user_id", "date"]
         ).execute()
     except Exception:
         # En cas d'erreur, on n'interrompt pas le flux principal

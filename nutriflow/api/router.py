@@ -839,6 +839,10 @@ def edit_meal(meal_id: str, payload: MealPatchPayload):
     if payload.delete:
         for item_id in payload.delete:
             db.delete_meal_item(item_id)
+    try:
+        update_daily_summary(user_id, meal_date or str(date.today()))
+    except Exception:
+        pass
     meal = get_meal(meal_id) or {"id": meal_id}
     return {
         "id": meal_id,
@@ -850,14 +854,28 @@ def edit_meal(meal_id: str, payload: MealPatchPayload):
 @router.delete("/meals/{meal_id}")
 def remove_meal(meal_id: str):
     """Supprime un repas et ses ingrédients."""
+    meal = db.get_meal(meal_id)
     db.delete_meal(meal_id)
+    try:
+        if meal:
+            update_daily_summary(meal.get("user_id", TEST_USER_ID), meal.get("date"))
+    except Exception:
+        pass
     return {"status": "deleted"}
 
 
 @router.delete("/meal-items/{item_id}")
 def remove_meal_item(item_id: str):
     """Supprime un ingrédient d'un repas."""
+    item = db.get_meal_item(item_id)
     db.delete_meal_item(item_id)
+    try:
+        if item:
+            meal = db.get_meal(item.get("meal_id"))
+            if meal:
+                update_daily_summary(meal.get("user_id", TEST_USER_ID), meal.get("date"))
+    except Exception:
+        pass
     return {"status": "deleted"}
 
 
