@@ -411,6 +411,25 @@ def aggregate_daily_summary(user_id: str, date: str):
         "conseil": conseil,
     }
 
+    # Ajout des objectifs personnalisés si les colonnes existent
+    try:
+        supabase.table("daily_summary").select(
+            "target_calories,target_proteins_g,target_fats_g,target_carbs_g"
+        ).limit(1).execute()
+        from nutriflow.api.router import compute_goals
+
+        goals = compute_goals(user, tdee)
+        record.update(
+            {
+                "target_calories": goals["target_kcal"],
+                "target_proteins_g": goals["prot_g"],
+                "target_fats_g": goals["fat_g"],
+                "target_carbs_g": goals["carbs_g"],
+            }
+        )
+    except Exception:
+        pass
+
     supabase.table("daily_summary").upsert(record).execute()
     return record
 
