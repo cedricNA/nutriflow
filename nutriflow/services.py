@@ -590,7 +590,11 @@ def update_daily_summary(user_id: str, date: date) -> Dict:
         }
 
         supabase = db.get_supabase_client()
-        supabase.table("daily_summary").upsert(record).execute()
+        # Utilise on_conflict pour éviter la création de doublons lorsque
+        # la ligne existe déjà pour la même date.
+        supabase.table("daily_summary").upsert(
+            record, on_conflict=["user_id", "date"]
+        ).execute()
     except Exception:
         # En cas d'erreur, on n'interrompt pas le flux principal
         pass

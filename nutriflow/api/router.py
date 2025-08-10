@@ -591,7 +591,8 @@ def get_goals():
                 "target_proteins_g": goals["prot_g"],
                 "target_fats_g": goals["fat_g"],
                 "target_carbs_g": goals["carbs_g"],
-            }
+            },
+            on_conflict=["user_id", "date"],
         ).execute()
     except Exception:
         pass

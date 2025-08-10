@@ -21,9 +21,12 @@ SAMPLE_USER = {
 class DummyTable:
     def __init__(self, store):
         self.store = store
-    def upsert(self, record):
+
+    def upsert(self, record, **_kwargs):
+        """Ignore les paramètres supplémentaires comme on_conflict."""
         self.store.append(record)
         return self
+
     def execute(self):
         return types.SimpleNamespace(data=self.store)
 
