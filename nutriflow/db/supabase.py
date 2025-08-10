@@ -430,7 +430,11 @@ def aggregate_daily_summary(user_id: str, date: str):
     except Exception:
         pass
 
-    supabase.table("daily_summary").upsert(record).execute()
+    # S'assure de mettre à jour l'entrée correspondant au même utilisateur et à la
+    # même date plutôt que de créer une nouvelle ligne partielle.
+    supabase.table("daily_summary").upsert(
+        record, on_conflict=["user_id", "date"]
+    ).execute()
     return record
 
 
