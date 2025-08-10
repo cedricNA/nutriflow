@@ -17,16 +17,14 @@ vi.mock('@/api/nutriflow', () => ({
     tdee: 2200,
   })),
   getDailySummary: vi.fn(async () => ({
-    date: '2024-01-01',
-    calories_apportees: 500,
-    calories_brulees: 0,
-    tdee: 2200,
-    balance_calorique: 0,
-    conseil: 'ok',
-    target_calories: 2000,
-    target_proteins_g: 150,
-    target_carbs_g: 180,
-    target_fats_g: 70,
+    calories_consumed: 500,
+    calories_goal: 2000,
+    proteins_consumed: 0,
+    proteins_goal: 150,
+    carbs_consumed: 0,
+    carbs_goal: 180,
+    fats_consumed: 0,
+    fats_goal: 70,
   })),
 }));
 
@@ -70,12 +68,10 @@ describe('Dashboard', () => {
   });
 
   it('affiche les données même si le profil utilisateur est absent', async () => {
-
     (getUserProfile as Mock).mockResolvedValueOnce(undefined);
-=======
-    (getUserProfile as Mock).mockRejectedValueOnce(new Error('not found'));
-
-
+    renderWithClient(<Index />);
+    expect(await screen.findByText(/Il vous reste 1500 kcal/i)).toBeInTheDocument();
+  });
 
   it("affiche un message d'erreur si le résumé du jour échoue", async () => {
     (getDailySummary as Mock).mockRejectedValueOnce(new Error('fail'));

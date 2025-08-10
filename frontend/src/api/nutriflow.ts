@@ -9,16 +9,14 @@ export type UserProfile = {
 };
 
 export type DailySummary = {
-  date: string;
-  calories_apportees: number;
-  calories_brulees: number;
-  tdee: number;
-  balance_calorique: number;
-  conseil: string;
-  target_calories?: number;
-  target_proteins_g?: number;
-  target_carbs_g?: number;
-  target_fats_g?: number;
+  calories_consumed?: number;
+  calories_goal?: number;
+  proteins_consumed?: number;
+  proteins_goal?: number;
+  carbs_consumed?: number;
+  carbs_goal?: number;
+  fats_consumed?: number;
+  fats_goal?: number;
 };
 
 const API = (path: string) => `/api${path}`;

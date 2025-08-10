@@ -38,8 +38,8 @@ const Index = () => {
   const goalLabel = profile ? goalLabels[profile.goal ?? ''] ?? profile.goal ?? 'Indéfini' : 'Indéfini';
 
   const macroLine =
-    summary && (summary.target_proteins_g || summary.target_carbs_g || summary.target_fats_g)
-      ? `Protéines : ${summary.target_proteins_g ?? 0} g • Glucides : ${summary.target_carbs_g ?? 0} g • Lipides : ${summary.target_fats_g ?? 0} g`
+    summary && (summary.proteins_goal || summary.carbs_goal || summary.fats_goal)
+      ? `Protéines : ${summary.proteins_goal ?? 0} g • Glucides : ${summary.carbs_goal ?? 0} g • Lipides : ${summary.fats_goal ?? 0} g`
       : undefined;
 
   const dialogContent = (
