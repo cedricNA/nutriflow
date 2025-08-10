@@ -791,6 +791,67 @@ def update_user_profile(data: UserProfileUpdate, user_id: str = TEST_USER_ID):
 
 # ----- Meals Management -----
 
+
+class MealCreatePayload(BaseModel):
+    type: str = Field(..., description="Type de repas")
+    date: Optional[str] = Field(
+        default_factory=lambda: str(date.today()), description="Date YYYY-MM-DD"
+    )
+    user_id: str = Field(TEST_USER_ID, description="Identifiant utilisateur")
+    note: Optional[str] = None
+
+
+class MealItemCreatePayload(BaseModel):
+    meal_id: str
+    nom_aliment: str
+    quantite: float
+    unite: str
+    calories: float
+    proteines_g: float
+    glucides_g: float
+    lipides_g: float
+    marque: Optional[str] = None
+    barcode: Optional[str] = None
+    source: Optional[str] = None
+
+
+@router.post("/meals")
+def create_meal(payload: MealCreatePayload):
+    meal_id = db.insert_meal(
+        payload.user_id, payload.date, payload.type, payload.note or ""
+    )
+    try:
+        update_daily_summary(payload.user_id, payload.date)
+    except Exception:
+        pass
+    return {"id": meal_id}
+
+
+@router.post("/meal-items")
+def create_meal_item(payload: MealItemCreatePayload):
+    item_id = db.insert_meal_item(
+        payload.meal_id,
+        payload.nom_aliment,
+        payload.quantite,
+        payload.unite,
+        payload.calories,
+        payload.proteines_g,
+        payload.glucides_g,
+        payload.lipides_g,
+        marque=payload.marque,
+        barcode=payload.barcode,
+        source=payload.source,
+    )
+    meal = db.get_meal(payload.meal_id)
+    uid = meal.get("user_id", TEST_USER_ID) if meal else TEST_USER_ID
+    ds = meal.get("date") if meal else str(date.today())
+    try:
+        update_daily_summary(uid, ds)
+    except Exception:
+        pass
+    return {"id": item_id}
+
+
 @router.get("/meals")
 def list_meals(
     user_id: str = TEST_USER_ID,
