@@ -17,7 +17,7 @@ NutriFlow est une API complète pour le suivi nutritionnel et sportif.
 **Principales fonctionnalités :**
 - Analyse et sauvegarde des repas (ingrédients maison, produits du commerce)
 - Suivi et calcul des activités physiques
-- Calcul automatique du bilan journalier personnalisé (TDEE, balance, conseil selon l’objectif)
+- Calcul automatique du bilan journalier personnalisé (TDEE, balance, feedback selon l’objectif)
 - Historique et profil utilisateur dynamique
 
 **Workflow classique :**

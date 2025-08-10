@@ -57,8 +57,8 @@ def test_update_daily_summary_dynamic(monkeypatch):
     monkeypatch.setattr(db, "get_meal_items", lambda *_: [])
     monkeypatch.setattr(db, "get_activities", lambda *_, **__: [])
     services.update_daily_summary("u1", "2024-01-01")
-    assert store[0]["calories_apportees"] == 0
-    assert store[0]["calories_brulees"] == 0
+    assert store[0]["calories_consumed"] == 0
+    assert store[0]["calories_burned"] == 0
     assert store[0]["num_meals"] == 0
     assert store[0]["num_activities"] == 0
 
@@ -77,7 +77,7 @@ def test_update_daily_summary_dynamic(monkeypatch):
         ],
     )
     services.update_daily_summary("u1", "2024-01-01")
-    assert store[0]["calories_apportees"] == 500
+    assert store[0]["calories_consumed"] == 500
     assert store[0]["num_meals"] == 1
 
     # Ajout d'une activité
@@ -85,6 +85,6 @@ def test_update_daily_summary_dynamic(monkeypatch):
         db, "get_activities", lambda *_, **__: [{"calories_brulees": 200, "duree_min": 30}]
     )
     services.update_daily_summary("u1", "2024-01-01")
-    assert store[0]["calories_brulees"] == 200
+    assert store[0]["calories_burned"] == 200
     assert store[0]["num_activities"] == 1
     assert "tdee" in store[0]

@@ -57,10 +57,10 @@ def test_aggregate_no_meal_no_activity(common_patches, monkeypatch):
     monkeypatch.setattr(db, "get_activities", lambda u, d: [])
 
     res = db.aggregate_daily_summary("u", "2023-01-01")
-    assert res["calories_apportees"] == 0.0
-    assert res["calories_brulees"] == 0.0
-    assert res["balance_calorique"] == -1800.0
-    assert inserted and inserted[0]["calories_apportees"] == 0.0
+    assert res["calories_consumed"] == 0.0
+    assert res["calories_burned"] == 0.0
+    assert res["calorie_balance"] == -1800.0
+    assert inserted and inserted[0]["calories_consumed"] == 0.0
 
 
 def test_aggregate_meals_no_activity(common_patches, monkeypatch):
@@ -74,9 +74,9 @@ def test_aggregate_meals_no_activity(common_patches, monkeypatch):
     monkeypatch.setattr(db, "get_activities", lambda u, d: [])
 
     res = db.aggregate_daily_summary("u", "2023-01-02")
-    assert res["calories_apportees"] == 600.0
-    assert res["balance_calorique"] == -1200.0
-    assert inserted and inserted[0]["prot_tot"] == 30.0
+    assert res["calories_consumed"] == 600.0
+    assert res["calorie_balance"] == -1200.0
+    assert inserted and inserted[0]["proteins_consumed"] == 30.0
 
 
 def test_aggregate_meals_with_activity(common_patches, monkeypatch):
@@ -90,10 +90,10 @@ def test_aggregate_meals_with_activity(common_patches, monkeypatch):
     monkeypatch.setattr(db, "get_activities", lambda u, d: [{"calories_brulees": 200}])
 
     res = db.aggregate_daily_summary("u", "2023-01-03")
-    assert res["calories_apportees"] == 800.0
-    assert res["calories_brulees"] == 200
+    assert res["calories_consumed"] == 800.0
+    assert res["calories_burned"] == 200
     assert res["tdee"] == 2000.0
-    assert inserted and inserted[0]["gluc_tot"] == 100.0
+    assert inserted and inserted[0]["carbs_consumed"] == 100.0
 
 
 def test_aggregate_with_targets(monkeypatch):
