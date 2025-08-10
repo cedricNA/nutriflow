@@ -16,8 +16,8 @@ export function useDashboardData() {
       const profile = await getUserProfile();
 
       const summary = await getDailySummary();
-      const target = summary.target_calories ?? summary.tdee ?? 0;
-      const remaining = target - (summary.calories_apportees ?? 0);
+      const target = summary.calories_goal ?? 0;
+      const remaining = target - (summary.calories_consumed ?? 0);
       return { profile, summary, remainingCalories: remaining, targetCalories: target };
     },
     staleTime: 1000 * 60,
