@@ -44,3 +44,16 @@ def test_compute_goals_prise():
     assert res["ratios"]["prot_pct"] == pytest.approx(0.25, rel=1e-3)
     assert res["ratios"]["fat_pct"] == pytest.approx(0.225, rel=1e-3)
     assert res["ratios"]["carbs_pct"] == pytest.approx(0.525, rel=1e-3)
+
+
+@pytest.mark.parametrize(
+    "objectif,tdee",
+    [("perte", 1200.0), ("maintien", 900.0), ("prise", 800.0)],
+)
+def test_compute_goals_bounds(objectif: str, tdee: float):
+    user = {**SAMPLE_USER, "objectif": objectif}
+    res = compute_goals(user, tdee)
+    min_prot = 1.8 * SAMPLE_USER["poids_kg"] if objectif != "prise" else 2.0 * SAMPLE_USER["poids_kg"]
+    assert res["prot_g"] >= min_prot
+    assert res["fat_g"] >= 0.8 * SAMPLE_USER["poids_kg"]
+    assert res["carbs_g"] == pytest.approx(0.0)

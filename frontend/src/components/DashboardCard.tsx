@@ -1,6 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
+import { Info as InfoIcon } from "lucide-react";
 import { ReactNode } from "react";
 
 interface DashboardCardProps {
@@ -13,6 +16,8 @@ interface DashboardCardProps {
   variant?: "default" | "calories" | "protein" | "carbs" | "fat";
   trend?: "up" | "down" | "neutral";
   loading?: boolean;
+  info?: string;
+  badge?: string;
 }
 
 export const DashboardCard = ({
@@ -25,6 +30,8 @@ export const DashboardCard = ({
   variant = "default",
   trend = "neutral",
   loading = false,
+  info,
+  badge,
 }: DashboardCardProps) => {
   const getVariantClasses = () => {
     switch (variant) {
@@ -38,6 +45,21 @@ export const DashboardCard = ({
         return "border-nutrition-fat/20 bg-gradient-to-br from-pink-50 to-pink-100/50";
       default:
         return "border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10";
+    }
+  };
+
+  const getProgressColor = () => {
+    switch (variant) {
+      case "calories":
+        return "bg-nutrition-calories";
+      case "protein":
+        return "bg-nutrition-protein";
+      case "carbs":
+        return "bg-nutrition-carbs";
+      case "fat":
+        return "bg-nutrition-fat";
+      default:
+        return "bg-primary";
     }
   };
 
@@ -58,7 +80,17 @@ export const DashboardCard = ({
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}
         </CardTitle>
-        {icon && <div className="text-muted-foreground">{icon}</div>}
+        <div className="flex items-center gap-2 text-muted-foreground">
+          {info && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <InfoIcon className="h-4 w-4 cursor-pointer" aria-label={`info ${title}`} />
+              </TooltipTrigger>
+              <TooltipContent>{info}</TooltipContent>
+            </Tooltip>
+          )}
+          {icon && <div>{icon}</div>}
+        </div>
       </CardHeader>
       <CardContent>
         {loading ? (
@@ -72,7 +104,7 @@ export const DashboardCard = ({
               <div className="text-2xl font-bold text-foreground">
                 {goal !== undefined
                   ? `${Math.round(value)} / ${Math.round(goal)} ${unit ?? ""}`
-                  : `${Math.round(value)} ${unit ?? ""}`}
+                  : `${Math.round(value)} / – ${unit ?? ""}`}
               </div>
               {trend !== "neutral" && (
                 <span className={`text-xs ${trend === "up" ? "text-success" : "text-warning"}`}>
@@ -81,8 +113,14 @@ export const DashboardCard = ({
               )}
             </div>
             {progress !== undefined && (
-              <Progress value={progress} className="h-2" />
+              <Progress
+                value={progress}
+                className="h-2"
+                indicatorClassName={getProgressColor()}
+                aria-label={`progression ${title}`}
+              />
             )}
+            {badge && <Badge className="mt-2">{badge}</Badge>}
             {subtitle && (
               <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
             )}

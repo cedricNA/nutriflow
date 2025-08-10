@@ -2,35 +2,26 @@ import { format } from "date-fns";
 import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
 import { DashboardCard } from "@/components/DashboardCard";
-import { MacroProgress } from "@/components/MacroProgress";
 import { QuickActions } from "@/components/QuickActions";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Flame, Drumstick, Wheat, Egg, Info as InfoIcon } from "lucide-react";
 import { useDailySummary } from "@/hooks/use-daily-summary";
+import { useGoals } from "@/hooks/use-goals";
 import heroImage from "@/assets/nutriflow-hero.jpg";
 
 const Index = () => {
   const today = format(new Date(), "yyyy-MM-dd");
   const { data: summary, isLoading } = useDailySummary(today);
+  const { data: goals, isLoading: goalsLoading, error: goalsError } = useGoals();
 
-  const macrosData = {
-    protein: {
-      current: summary?.prot_tot ?? summary?.proteins_consumed ?? 0,
-      target: summary?.prot_obj ?? summary?.proteins_goal,
-    },
-    carbs: {
-      current: summary?.gluc_tot ?? summary?.carbs_consumed ?? 0,
-      target: summary?.gluc_obj ?? summary?.carbs_goal,
-    },
-    fat: {
-      current: summary?.lip_tot ?? summary?.fats_consumed ?? 0,
-      target: summary?.lip_obj ?? summary?.fats_goal,
-    },
-  };
+  const caloriesConsumed = summary?.calories_consumed ?? 0;
+  const proteinConsumed = summary?.prot_tot ?? summary?.proteins_consumed ?? 0;
+  const carbsConsumed = summary?.gluc_tot ?? summary?.carbs_consumed ?? 0;
+  const fatConsumed = summary?.lip_tot ?? summary?.fats_consumed ?? 0;
 
   const remainingCalories =
-    (summary?.calories_goal ?? 0) - (summary?.calories_consumed ?? 0);
+    (goals?.target_kcal ?? 0) - caloriesConsumed;
 
 
   return (
@@ -95,59 +86,63 @@ const Index = () => {
             {/* Quick Actions */}
             <QuickActions />
 
-            {/* Dashboard Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Objectif du jour */}
+            <section className="space-y-4">
+              <h2 className="text-lg font-semibold">Objectif du jour</h2>
+
+              {goalsError && (
+                <Alert variant="destructive">
+                  <AlertTitle>Erreur</AlertTitle>
+                  <AlertDescription>
+                    Impossible de charger les objectifs.
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <DashboardCard
                 title="Calories"
-                value={summary?.calories_consumed ?? 0}
-                goal={summary?.calories_goal}
+                value={caloriesConsumed}
+                goal={goals?.target_kcal}
                 unit="kcal"
                 icon={<Flame className="h-4 w-4" />}
                 variant="calories"
-                loading={isLoading}
+                loading={isLoading || goalsLoading}
               />
-              <DashboardCard
-                title="Protéines"
-                value={summary?.proteins_consumed ?? 0}
-                goal={summary?.proteins_goal}
-                unit="g"
-                icon={<Drumstick className="h-4 w-4" />}
-                variant="protein"
-                loading={isLoading}
-              />
-              <DashboardCard
-                title="Glucides"
-                value={summary?.carbs_consumed ?? 0}
-                goal={summary?.carbs_goal}
-                unit="g"
-                icon={<Wheat className="h-4 w-4" />}
-                variant="carbs"
-                loading={isLoading}
-              />
-              <DashboardCard
-                title="Lipides"
-                value={summary?.fats_consumed ?? 0}
-                goal={summary?.fats_goal}
-                unit="g"
-                icon={<Egg className="h-4 w-4" />}
-                variant="fat"
-                loading={isLoading}
-              />
-            </div>
 
-            {/* Macros and Progress */}
-            <Card className="shadow-soft">
-              <CardHeader>
-                <CardTitle>Progression des macronutriments</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <MacroProgress
-                  protein={macrosData.protein}
-                  carbs={macrosData.carbs}
-                  fat={macrosData.fat}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <DashboardCard
+                  title="Protéines"
+                  value={proteinConsumed}
+                  goal={goals?.prot_g}
+                  unit="g"
+                  icon={<Drumstick className="h-4 w-4" />}
+                  variant="protein"
+                  loading={isLoading || goalsLoading}
+                  info="Protéines ≈ 1.8–2.0 g/kg selon l’objectif"
                 />
-              </CardContent>
-            </Card>
+                <DashboardCard
+                  title="Glucides"
+                  value={carbsConsumed}
+                  goal={goals?.carbs_g}
+                  unit="g"
+                  icon={<Wheat className="h-4 w-4" />}
+                  variant="carbs"
+                  loading={isLoading || goalsLoading}
+                  info="Glucides = énergie restante après prot/lipides"
+                  badge={goals && goals.carbs_g === 0 ? "cible lipides/protéines trop haute pour ce TDEE" : undefined}
+                />
+                <DashboardCard
+                  title="Lipides"
+                  value={fatConsumed}
+                  goal={goals?.fat_g}
+                  unit="g"
+                  icon={<Egg className="h-4 w-4" />}
+                  variant="fat"
+                  loading={isLoading || goalsLoading}
+                  info="Lipides ≈ 0.8 g/kg"
+                />
+              </div>
+            </section>
         </main>
       </div>
       <BottomNav />
