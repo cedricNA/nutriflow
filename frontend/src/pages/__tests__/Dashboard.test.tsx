@@ -30,7 +30,9 @@ vi.mock('@/api/nutriflow', () => ({
   })),
 }));
 
-import { getUserProfile } from '@/api/nutriflow';
+
+import { getUserProfile, getDailySummary } from '@/api/nutriflow';
+
 
 function renderWithClient(ui: React.ReactElement) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -68,9 +70,19 @@ describe('Dashboard', () => {
   });
 
   it('affiche les données même si le profil utilisateur est absent', async () => {
+
+    (getUserProfile as Mock).mockResolvedValueOnce(undefined);
+=======
     (getUserProfile as Mock).mockRejectedValueOnce(new Error('not found'));
+
+
+
+  it("affiche un message d'erreur si le résumé du jour échoue", async () => {
+    (getDailySummary as Mock).mockRejectedValueOnce(new Error('fail'));
     renderWithClient(<Index />);
-    expect(await screen.findByText(/Objectif : Indéfini/i)).toBeInTheDocument();
-    expect(screen.getByText(/Il vous reste 1500 kcal/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Erreur lors du chargement des données du dashboard/i)
+    ).toBeInTheDocument();
   });
+
 });

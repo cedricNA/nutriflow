@@ -12,12 +12,8 @@ export function useDashboardData() {
   return useQuery<DashboardData>({
     queryKey: ['dashboard-data'],
     queryFn: async () => {
-      let profile: UserProfile | undefined;
-      try {
-        profile = await getUserProfile();
-      } catch (e) {
-        profile = undefined;
-      }
+
+      const profile = await getUserProfile();
 
       const summary = await getDailySummary();
       const target = summary.target_calories ?? summary.tdee ?? 0;

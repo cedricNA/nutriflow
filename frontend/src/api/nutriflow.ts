@@ -23,8 +23,9 @@ export type DailySummary = {
 
 const API = (path: string) => `/api${path}`;
 
-export async function getUserProfile(): Promise<UserProfile> {
+export async function getUserProfile(): Promise<UserProfile | undefined> {
   const res = await fetch(API('/user/profile'));
+  if (res.status === 404) return undefined;
   if (!res.ok) throw new Error('Failed to load user profile');
   return res.json();
 }
