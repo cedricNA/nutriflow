@@ -6,7 +6,7 @@ import asyncio
 import inspect
 from typing import List, Dict, Optional
 from fastapi import HTTPException
-from datetime import date, datetime
+from datetime import date as dt_date, datetime
 
 import nutriflow.db.supabase as db
 
@@ -543,10 +543,37 @@ def calculate_macro_goals(poids_kg: Optional[float], calories_goal: Optional[flo
     }
 
 
-def update_daily_summary(user_id: str, date: date) -> Dict:
+def generate_conseil(objectif: str, balance: float) -> str:
+    """Retourne un message personnalisé selon l'objectif et la balance."""
+    obj = (objectif or "maintien").lower()
+    if obj == "perte":
+        if balance < -300:
+            return "Déficit important, perte de poids rapide possible."
+        if balance < 0:
+            return "Déficit modéré, bonne trajectoire pour perdre du poids."
+        if balance < 150:
+            return "Attention, vous êtes en léger surplus."
+        return "Surplus, risque de prise de poids."
+    if obj == "prise":
+        if balance > 300:
+            return "Surplus optimal pour prise de masse."
+        if balance > 0:
+            return "Surplus léger, progression possible mais lente."
+        if balance > -150:
+            return "Attention, vous êtes presque à l’équilibre."
+        return "Déficit, trop faible pour prise de masse."
+    # maintien
+    if abs(balance) < 150:
+        return "Maintien calorique atteint."
+    if balance < 0:
+        return "Léger déficit, surveillez si ce n’est pas souhaité."
+    return "Léger surplus, surveillez si ce n’est pas souhaité."
+
+
+def update_daily_summary(user_id: str, date: Optional[str] = None) -> Dict:
     """Agrège repas et activités d'une journée et met à jour `daily_summary`."""
 
-    date_str = date if isinstance(date, str) else date.isoformat()
+    date_str = date if date else dt_date.today().isoformat()
 
     try:
         meals = db.get_meals(user_id, date_str)
@@ -567,6 +594,12 @@ def update_daily_summary(user_id: str, date: date) -> Dict:
 
         user = db.get_user(user_id) or {}
         try:
+            bmr = calculer_bmr(
+                user.get("poids_kg", 0),
+                user.get("taille_cm", 0),
+                user.get("age", 0),
+                user.get("sexe", "male"),
+            )
             tdee_base = calculer_tdee(
                 user.get("poids_kg", 0),
                 user.get("taille_cm", 0),
@@ -574,41 +607,34 @@ def update_daily_summary(user_id: str, date: date) -> Dict:
                 user.get("sexe", "male"),
                 user.get("activity_factor", 1.2),
             )
-            tdee_user = ajuster_tdee(tdee_base, user.get("goal") or user.get("objectif"))
+            tdee = ajuster_tdee(
+                tdee_base, user.get("goal") or user.get("objectif")
+            )
         except Exception:
-            tdee_user = user.get("tdee", 2000.0) or 2000.0
-        tdee = tdee_user + calories_brulees
+            bmr = user.get("bmr", 1500.0) or 1500.0
+            tdee = user.get("tdee", 2000.0) or 2000.0
 
-        balance_calorique = calories_apportees - tdee
+        net_calories = calories_apportees - calories_brulees
+        balance_calorique = net_calories - tdee
         total_calories = calories_apportees + calories_brulees
         has_data = bool(num_meals or num_activities)
 
-        objectif = (user.get("goal") or user.get("objectif") or "maintien").lower()
-        if objectif == "perte":
-            if balance_calorique < -300:
-                conseil = "Déficit important, perte de poids rapide possible."
-            elif balance_calorique < 0:
-                conseil = "Déficit modéré, bonne trajectoire pour perdre du poids."
-            elif balance_calorique < 150:
-                conseil = "Attention, vous êtes en léger surplus."
-            else:
-                conseil = "Surplus, risque de prise de poids."
-        elif objectif == "prise":
-            if balance_calorique > 300:
-                conseil = "Surplus optimal pour prise de masse."
-            elif balance_calorique > 0:
-                conseil = "Surplus léger, progression possible mais lente."
-            elif balance_calorique > -150:
-                conseil = "Attention, vous êtes presque à l’équilibre."
-            else:
-                conseil = "Déficit, trop faible pour prise de masse."
-        else:  # maintien
-            if abs(balance_calorique) < 150:
-                conseil = "Maintien calorique atteint."
-            elif balance_calorique < 0:
-                conseil = "Léger déficit, surveillez si ce n’est pas souhaité."
-            else:
-                conseil = "Léger surplus, surveillez si ce n’est pas souhaité."
+        objectif = user.get("goal") or user.get("objectif") or "maintien"
+        conseil = generate_conseil(objectif, balance_calorique)
+
+        targets: Dict[str, float] = {}
+        try:
+            from nutriflow.api.router import compute_goals
+
+            goals = compute_goals(user, tdee)
+            targets = {
+                "target_calories": goals.get("target_kcal"),
+                "target_proteins_g": goals.get("prot_g"),
+                "target_fats_g": goals.get("fat_g"),
+                "target_carbs_g": goals.get("carbs_g"),
+            }
+        except Exception:
+            pass
 
         record = {
             "user_id": user_id,
@@ -618,6 +644,7 @@ def update_daily_summary(user_id: str, date: date) -> Dict:
             "prot_tot": prot_tot,
             "gluc_tot": gluc_tot,
             "lip_tot": lip_tot,
+            "bmr": bmr,
             "tdee": tdee,
             "balance_calorique": balance_calorique,
             "conseil": conseil,
@@ -627,25 +654,17 @@ def update_daily_summary(user_id: str, date: date) -> Dict:
             "num_activities": num_activities,
             "has_data": has_data,
             "last_updated": datetime.utcnow().isoformat(),
+            **targets,
         }
 
         supabase = db.get_supabase_client()
-        existing = (
-            supabase.table("daily_summary")
-            .select("*")
-            .eq("user_id", user_id)
-            .eq("date", date_str)
-            .execute()
-        )
-        current = existing.data[0] if existing.data else {}
-        payload = {**current, **record}
-
         supabase.table("daily_summary").upsert(
-            payload, on_conflict=["user_id", "date"]
+            record, on_conflict=["user_id", "date"]
         ).execute()
+        print(f"📝 daily_summary mis à jour pour {user_id} le {date_str}")
     except Exception:
         # En cas d'erreur, on n'interrompt pas le flux principal
-        pass
+        return {}
     return record
 
 
@@ -657,7 +676,7 @@ def add_meal_item(
 ) -> Dict:
     """Ajoute un aliment à un repas et met à jour le résumé quotidien."""
 
-    ds = date_str or date.today().isoformat()
+    ds = date_str or dt_date.today().isoformat()
 
     meals = db.get_meals(user_id, ds)
     meal_id = None
