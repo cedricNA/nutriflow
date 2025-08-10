@@ -38,6 +38,42 @@ from nutriflow.services import (
 router = APIRouter()
 
 
+def compute_goals(user: Dict, tdee: float) -> Dict[str, float]:
+    """Calcule les objectifs caloriques et macros selon le profil utilisateur."""
+    objectif = (user.get("goal") or user.get("objectif") or "maintien").lower()
+    poids = user.get("poids_kg", 0)
+
+    if objectif == "perte":
+        target_kcal = tdee * 0.80
+        prot_g = 1.8 * poids
+    elif objectif == "prise":
+        target_kcal = tdee * 1.12
+        prot_g = 2.0 * poids
+    else:  # maintien
+        target_kcal = tdee
+        prot_g = 1.8 * poids
+
+    fat_g = 0.8 * poids
+    kcal_restantes = target_kcal - (prot_g * 4 + fat_g * 9)
+    carbs_g = max(0.0, kcal_restantes / 4)
+
+    prot_pct = (prot_g * 4) / target_kcal if target_kcal else 0
+    fat_pct = (fat_g * 9) / target_kcal if target_kcal else 0
+    carbs_pct = (carbs_g * 4) / target_kcal if target_kcal else 0
+
+    return {
+        "target_kcal": target_kcal,
+        "prot_g": prot_g,
+        "fat_g": fat_g,
+        "carbs_g": carbs_g,
+        "ratios": {
+            "prot_pct": prot_pct,
+            "fat_pct": fat_pct,
+            "carbs_pct": carbs_pct,
+        },
+    }
+
+
 def _analyze_item(name: str, qty: float, unit: str) -> Dict[str, float]:
     """Analyse un ingrédient via Nutritionix et retourne les infos utiles."""
     query = normalize_units_text(f"{qty} {unit} {name}")
@@ -269,6 +305,22 @@ class DailyNutritionSummary(BaseModel):
     fats_goal: Optional[float] = None
 
 
+class GoalRatios(BaseModel):
+    prot_pct: float
+    fat_pct: float
+    carbs_pct: float
+
+
+class GoalsResponse(BaseModel):
+    target_kcal: float
+    prot_g: float
+    fat_g: float
+    carbs_g: float
+    ratios: GoalRatios
+    tdee: float
+    objectif: str
+
+
 # ----- Endpoints -----
 @router.post("/ingredients", response_model=NutritionixResponse)
 def ingredients(data: IngredientQuery):
@@ -496,6 +548,55 @@ def tdee(data: TDEEQuery):
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/user/goals", response_model=GoalsResponse)
+def get_goals():
+    """Retourne les objectifs personnalisés calories et macros de l'utilisateur."""
+    user_id = TEST_USER_ID
+    user = db.get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable")
+
+    today = date.today().isoformat()
+    activities = db.get_activities(user_id, today)
+    calories_brulees = (
+        sum(a.get("calories_brulees", 0) for a in activities) if activities else 0.0
+    )
+
+    tdee_base = calculer_tdee(
+        user["poids_kg"],
+        user["taille_cm"],
+        user["age"],
+        user["sexe"],
+        user.get("activity_factor", 1.2),
+    )
+    tdee_user = ajuster_tdee(tdee_base, user.get("goal") or user.get("objectif", "maintien"))
+    tdee = tdee_user + calories_brulees
+
+    goals = compute_goals(user, tdee)
+    objectif = (user.get("goal") or user.get("objectif") or "maintien").lower()
+
+    # Optionnel : historiser dans daily_summary si les colonnes existent
+    try:
+        supabase = db.get_supabase_client()
+        supabase.table("daily_summary").select(
+            "target_calories,target_proteins_g,target_fats_g,target_carbs_g"
+        ).limit(1).execute()
+        supabase.table("daily_summary").upsert(
+            {
+                "user_id": user_id,
+                "date": today,
+                "target_calories": goals["target_kcal"],
+                "target_proteins_g": goals["prot_g"],
+                "target_fats_g": goals["fat_g"],
+                "target_carbs_g": goals["carbs_g"],
+            }
+        ).execute()
+    except Exception:
+        pass
+
+    return GoalsResponse(**goals, tdee=tdee, objectif=objectif)
 
 
 @router.get("/daily-summary", response_model=DailyNutritionSummary)
