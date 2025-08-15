@@ -156,7 +156,7 @@ Et voilà ! Tu disposes maintenant d'une API pour gérer alimentation et activit
 
 ## Documentation développeur complète
 
-# 🚀 NutriFlow API – Documentation développeur
+🚀 NutriFlow API – Documentation développeur
 
 NutriFlow est une API complète pour le suivi nutritionnel et sportif.  
 Elle permet d’analyser, enregistrer et restituer :
@@ -224,9 +224,11 @@ Elle permet d’analyser, enregistrer et restituer :
 - Réponse : liste d’exercices analysés
 
 ### `/api/daily-summary`
-Calcule ou lit le bilan nutritionnel du jour (apports, dépenses, TDEE, balance, goal feedback).
-Paramètre : `date_str` (optionnel)
-Exemple de réponse :
+
+- Calcule ou lit le bilan nutritionnel du jour (apports, dépenses, TDEE, balance, goal feedback).
+- Paramètre : `date_str` (optionnel)
+- Exemple de réponse :
+
 ```json
 {
   "date": "2025-07-21",
