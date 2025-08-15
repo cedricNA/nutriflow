@@ -208,10 +208,10 @@ Elle permet d’analyser, enregistrer et restituer :
 ```
 - Réponse : liste d’exercices analysés
 
--### `/api/daily-summary`
-- Calcule ou lit le bilan nutritionnel du jour (apports, dépenses, TDEE, balance, goal feedback).
-- Paramètre : `date_str` (optionnel)
-- Exemple de réponse :
+### `/api/daily-summary`
+Calcule ou lit le bilan nutritionnel du jour (apports, dépenses, TDEE, balance, goal feedback).
+Paramètre : `date_str` (optionnel)
+Exemple de réponse :
 ```json
 {
   "date": "2025-07-21",
@@ -222,6 +222,8 @@ Elle permet d’analyser, enregistrer et restituer :
   "goal_feedback": "Déficit modéré, bonne trajectoire pour perdre du poids."
 }
 ```
+#### `POST /api/daily-summary/update`
+- Permet de mettre à jour le bilan du jour si tu souhaites corriger ou compléter les valeurs calculées automatiquement.
 
 ### `/api/history`
 - Retourne l’historique des bilans journaliers.
