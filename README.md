@@ -97,6 +97,18 @@ NutriFlow est une API en **FastAPI** qui t'aide à suivre ta nutrition et tes ac
     "poids_kg": 72.5
   }
   ```
+- **GET `/api/user/goals`** – Donne les objectifs calories et macros actuels.
+  ```json
+  {
+    "target_kcal": 2300,
+    "prot_g": 130,
+    "fat_g": 70,
+    "carbs_g": 250,
+    "ratios": { "prot_pct": 25, "fat_pct": 30, "carbs_pct": 45 },
+    "tdee": 2300,
+    "objectif": "maintien"
+  }
+  ```
 
 - **GET `/api/sports`** – Liste les activités sportives reconnues.
   ```json
@@ -154,8 +166,8 @@ Elle permet d’analyser, enregistrer et restituer :
 | `/api/history` | GET | Récupère l’historique des bilans | `?limit=7&user_id=...` |
 | `/api/user/profile` | GET | Récupère le profil utilisateur | `?user_id=...` |
 | `/api/user/profile/update` | POST | Modifie le profil utilisateur | `{ "poids_kg": 72 }` |
-| `/api/sports` | GET | Liste des sports disponibles | `["course à pied", "natation"]` |
-| `/api/units` | GET | Mapping des unités FR → EN | `{ "cuillère à soupe": "tablespoon" }` |
+
+| `/api/user/goals` | GET | Donne les objectifs calories et macros de l'utilisateur | `-` |
 
 ## Workflow type utilisateur
 
@@ -233,6 +245,21 @@ Elle permet d’analyser, enregistrer et restituer :
 - Met à jour le profil utilisateur.
 - Payload : `{ "poids_kg": 72 }`
 - Réponse : profil mis à jour
+
+### `/api/user/goals`
+- Retourne les objectifs calories et macros calculés pour l'utilisateur.
+- Exemple de réponse :
+```json
+{
+  "target_kcal": 2300,
+  "prot_g": 130,
+  "fat_g": 70,
+  "carbs_g": 250,
+  "ratios": { "prot_pct": 25, "fat_pct": 30, "carbs_pct": 45 },
+  "tdee": 2300,
+  "objectif": "maintien"
+}
+```
 
 ## FAQ & Conseils
 
