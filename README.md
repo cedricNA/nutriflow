@@ -98,6 +98,23 @@ NutriFlow est une API en **FastAPI** qui t'aide à suivre ta nutrition et tes ac
   }
   ```
 
+- **GET `/api/sports`** – Liste les activités sportives reconnues.
+  ```json
+  [
+    "course à pied",
+    "natation",
+    "vélo"
+  ]
+  ```
+- **GET `/api/units`** – Mapping des unités françaises vers l'anglais.
+  ```json
+  {
+    "cuillère à soupe": "tablespoon",
+    "cc": "teaspoon",
+    "verre": "glass"
+  }
+  ```
+
 Pour préremplir le formulaire d'activité physique, récupère d'abord ces informations
 avec `GET /api/user/profile` puis envoie-les (éventuellement modifiées) à `POST /api/exercise`.
 
@@ -137,6 +154,8 @@ Elle permet d’analyser, enregistrer et restituer :
 | `/api/history` | GET | Récupère l’historique des bilans | `?limit=7&user_id=...` |
 | `/api/user/profile` | GET | Récupère le profil utilisateur | `?user_id=...` |
 | `/api/user/profile/update` | POST | Modifie le profil utilisateur | `{ "poids_kg": 72 }` |
+| `/api/sports` | GET | Liste des sports disponibles | `["course à pied", "natation"]` |
+| `/api/units` | GET | Mapping des unités FR → EN | `{ "cuillère à soupe": "tablespoon" }` |
 
 ## Workflow type utilisateur
 
