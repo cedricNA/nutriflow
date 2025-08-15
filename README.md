@@ -50,6 +50,10 @@ NutriFlow est une API en **FastAPI** qui t'aide à suivre ta nutrition et tes ac
     "barcode": "3274080005003"
   }
   ```
+- **GET `/api/products/{barcode}/details`** – Détails complets d'un produit via son code-barres.
+  ```text
+  /api/products/3274080005003/details
+  ```
 - **GET `/api/search`** – Recherche d'un produit.
   ```text
   /api/search?query=yaourt
@@ -106,6 +110,23 @@ NutriFlow est une API en **FastAPI** qui t'aide à suivre ta nutrition et tes ac
   }
   ```
 
+- **GET `/api/sports`** – Liste les activités sportives reconnues.
+  ```json
+  [
+    "course à pied",
+    "natation",
+    "vélo"
+  ]
+  ```
+- **GET `/api/units`** – Mapping des unités françaises vers l'anglais.
+  ```json
+  {
+    "cuillère à soupe": "tablespoon",
+    "cc": "teaspoon",
+    "verre": "glass"
+  }
+  ```
+
 Pour préremplir le formulaire d'activité physique, récupère d'abord ces informations
 avec `GET /api/user/profile` puis envoie-les (éventuellement modifiées) à `POST /api/exercise`.
 
@@ -136,6 +157,7 @@ Elle permet d’analyser, enregistrer et restituer :
 |-------|---------|------|--------------------|
 | `/api/ingredients` | POST | Analyse & enregistre un repas maison | `{ "query": "2 carottes, 100g steak haché" }` |
 | `/api/barcode` | POST | Analyse & enregistre un aliment par code-barres | `{ "barcode": "3274080005003" }` |
+| `/api/products/{barcode}/details` | GET | Récupère les détails d'un produit par code-barres | `/api/products/3274080005003/details` |
 | `/api/search` | GET | Recherche un produit dans OpenFoodFacts | `?query=yaourt` |
 | `/api/exercise` | POST | Analyse & enregistre une activité physique | `{ "query": "45 minutes de vélo", ... }` |
 | `/api/bmr` | POST | Calcule le BMR (besoin basal) | `{ "poids_kg": 75, "taille_cm": 175, "age": 30, "sexe": "homme" }` |
@@ -144,6 +166,7 @@ Elle permet d’analyser, enregistrer et restituer :
 | `/api/history` | GET | Récupère l’historique des bilans | `?limit=7&user_id=...` |
 | `/api/user/profile` | GET | Récupère le profil utilisateur | `?user_id=...` |
 | `/api/user/profile/update` | POST | Modifie le profil utilisateur | `{ "poids_kg": 72 }` |
+
 | `/api/user/goals` | GET | Donne les objectifs calories et macros de l'utilisateur | `-` |
 
 ## Workflow type utilisateur
