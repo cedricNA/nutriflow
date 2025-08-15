@@ -130,6 +130,21 @@ NutriFlow est une API en **FastAPI** qui t'aide à suivre ta nutrition et tes ac
 Pour préremplir le formulaire d'activité physique, récupère d'abord ces informations
 avec `GET /api/user/profile` puis envoie-les (éventuellement modifiées) à `POST /api/exercise`.
 
+## Gestion des repas et activités
+
+Ces routes te permettent de créer, consulter et supprimer les repas ainsi que les activités.
+
+| Méthode & URL | Rôle | Exemple d'utilisation |
+|---------------|------|----------------------|
+| POST `/api/meals` | Crée un nouveau repas | `{ "name": "Déjeuner", "date": "2025-07-21" }` |
+| POST `/api/meal-items` | Ajoute un aliment à un repas | `{ "meal_id": 1, "item": "2 oeufs" }` |
+| GET `/api/meals` | Liste les repas existants | `/api/meals?date=2025-07-21` |
+| PATCH `/api/meals/{meal_id}` | Modifie un repas existant | `{ "name": "Petit-déjeuner" }` |
+| DELETE `/api/meals/{meal_id}` | Supprime un repas | `/api/meals/1` |
+| DELETE `/api/meal-items/{item_id}` | Retire un aliment d'un repas | `/api/meal-items/42` |
+| GET `/api/activities` | Liste les activités enregistrées | `/api/activities?date=2025-07-21` |
+| DELETE `/api/activities/{activity_id}` | Supprime une activité | `/api/activities/3` |
+
 ## Lancer les tests unitaires
 
 Assure-toi d'avoir installé les dépendances de test, puis exécute :
