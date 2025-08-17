@@ -50,6 +50,10 @@ NutriFlow est une API en **FastAPI** qui t'aide à suivre ta nutrition et tes ac
     "barcode": "3274080005003"
   }
   ```
+- **GET `/api/products/{barcode}/details`** – Détails complets d'un produit via son code-barres.
+  ```text
+  /api/products/3274080005003/details
+  ```
 - **GET `/api/search`** – Recherche d'un produit.
   ```text
   /api/search?query=yaourt
@@ -93,9 +97,53 @@ NutriFlow est une API en **FastAPI** qui t'aide à suivre ta nutrition et tes ac
     "poids_kg": 72.5
   }
   ```
+- **GET `/api/user/goals`** – Donne les objectifs calories et macros actuels.
+  ```json
+  {
+    "target_kcal": 2300,
+    "prot_g": 130,
+    "fat_g": 70,
+    "carbs_g": 250,
+    "ratios": { "prot_pct": 25, "fat_pct": 30, "carbs_pct": 45 },
+    "tdee": 2300,
+    "objectif": "maintien"
+  }
+  ```
+
+- **GET `/api/sports`** – Liste les activités sportives reconnues.
+  ```json
+  [
+    "course à pied",
+    "natation",
+    "vélo"
+  ]
+  ```
+- **GET `/api/units`** – Mapping des unités françaises vers l'anglais.
+  ```json
+  {
+    "cuillère à soupe": "tablespoon",
+    "cc": "teaspoon",
+    "verre": "glass"
+  }
+  ```
 
 Pour préremplir le formulaire d'activité physique, récupère d'abord ces informations
 avec `GET /api/user/profile` puis envoie-les (éventuellement modifiées) à `POST /api/exercise`.
+
+## Gestion des repas et activités
+
+Ces routes te permettent de créer, consulter et supprimer les repas ainsi que les activités.
+
+| Méthode & URL | Rôle | Exemple d'utilisation |
+|---------------|------|----------------------|
+| POST `/api/meals` | Crée un nouveau repas | `{ "name": "Déjeuner", "date": "2025-07-21" }` |
+| POST `/api/meal-items` | Ajoute un aliment à un repas | `{ "meal_id": 1, "item": "2 oeufs" }` |
+| GET `/api/meals` | Liste les repas existants | `/api/meals?date=2025-07-21` |
+| PATCH `/api/meals/{meal_id}` | Modifie un repas existant | `{ "name": "Petit-déjeuner" }` |
+| DELETE `/api/meals/{meal_id}` | Supprime un repas | `/api/meals/1` |
+| DELETE `/api/meal-items/{item_id}` | Retire un aliment d'un repas | `/api/meal-items/42` |
+| GET `/api/activities` | Liste les activités enregistrées | `/api/activities?date=2025-07-21` |
+| DELETE `/api/activities/{activity_id}` | Supprime une activité | `/api/activities/3` |
 
 ## Lancer les tests unitaires
 
@@ -108,7 +156,7 @@ Et voilà ! Tu disposes maintenant d'une API pour gérer alimentation et activit
 
 ## Documentation développeur complète
 
-# 🚀 NutriFlow API – Documentation développeur
+🚀 NutriFlow API – Documentation développeur
 
 NutriFlow est une API complète pour le suivi nutritionnel et sportif.  
 Elle permet d’analyser, enregistrer et restituer :
@@ -124,6 +172,7 @@ Elle permet d’analyser, enregistrer et restituer :
 |-------|---------|------|--------------------|
 | `/api/ingredients` | POST | Analyse & enregistre un repas maison | `{ "query": "2 carottes, 100g steak haché" }` |
 | `/api/barcode` | POST | Analyse & enregistre un aliment par code-barres | `{ "barcode": "3274080005003" }` |
+| `/api/products/{barcode}/details` | GET | Récupère les détails d'un produit par code-barres | `/api/products/3274080005003/details` |
 | `/api/search` | GET | Recherche un produit dans OpenFoodFacts | `?query=yaourt` |
 | `/api/exercise` | POST | Analyse & enregistre une activité physique | `{ "query": "45 minutes de vélo", ... }` |
 | `/api/bmr` | POST | Calcule le BMR (besoin basal) | `{ "poids_kg": 75, "taille_cm": 175, "age": 30, "sexe": "homme" }` |
@@ -132,6 +181,8 @@ Elle permet d’analyser, enregistrer et restituer :
 | `/api/history` | GET | Récupère l’historique des bilans | `?limit=7&user_id=...` |
 | `/api/user/profile` | GET | Récupère le profil utilisateur | `?user_id=...` |
 | `/api/user/profile/update` | POST | Modifie le profil utilisateur | `{ "poids_kg": 72 }` |
+
+| `/api/user/goals` | GET | Donne les objectifs calories et macros de l'utilisateur | `-` |
 
 ## Workflow type utilisateur
 
@@ -172,10 +223,12 @@ Elle permet d’analyser, enregistrer et restituer :
 ```
 - Réponse : liste d’exercices analysés
 
--### `/api/daily-summary`
+### `/api/daily-summary`
+
 - Calcule ou lit le bilan nutritionnel du jour (apports, dépenses, TDEE, balance, goal feedback).
 - Paramètre : `date_str` (optionnel)
 - Exemple de réponse :
+
 ```json
 {
   "date": "2025-07-21",
@@ -186,6 +239,8 @@ Elle permet d’analyser, enregistrer et restituer :
   "goal_feedback": "Déficit modéré, bonne trajectoire pour perdre du poids."
 }
 ```
+#### `POST /api/daily-summary/update`
+- Permet de mettre à jour le bilan du jour si tu souhaites corriger ou compléter les valeurs calculées automatiquement.
 
 ### `/api/history`
 - Retourne l’historique des bilans journaliers.
@@ -209,6 +264,21 @@ Elle permet d’analyser, enregistrer et restituer :
 - Met à jour le profil utilisateur.
 - Payload : `{ "poids_kg": 72 }`
 - Réponse : profil mis à jour
+
+### `/api/user/goals`
+- Retourne les objectifs calories et macros calculés pour l'utilisateur.
+- Exemple de réponse :
+```json
+{
+  "target_kcal": 2300,
+  "prot_g": 130,
+  "fat_g": 70,
+  "carbs_g": 250,
+  "ratios": { "prot_pct": 25, "fat_pct": 30, "carbs_pct": 45 },
+  "tdee": 2300,
+  "objectif": "maintien"
+}
+```
 
 ## FAQ & Conseils
 
