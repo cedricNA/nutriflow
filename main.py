@@ -2,12 +2,10 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from nutriflow.api.router import router as nutriflow_router
 
 # Charge .env
 load_dotenv()
-
-# Router
-from nutriflow.api.router import router as nutriflow_router
 
 app = FastAPI(
     title="NutriFlow API",
@@ -48,7 +46,7 @@ origins_env = os.getenv("CORS_ORIGINS")
 if origins_env:
     allowed_origins = [o.strip() for o in origins_env.split(",") if o.strip()]
 else:
-    allowed_origins = ["http://localhost:8080"]
+    allowed_origins = ["http://localhost:8080", "http://localhost:5173", "http://localhost:8081"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
@@ -59,6 +57,7 @@ app.add_middleware(
 
 # Monte le router sous /api
 app.include_router(nutriflow_router, prefix="/api", tags=["NutriFlow"])
+
 
 @app.get("/")
 async def root():

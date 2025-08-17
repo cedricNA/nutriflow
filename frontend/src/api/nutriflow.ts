@@ -10,13 +10,23 @@ export type UserProfile = {
 
 export type DailySummary = {
   calories_consumed?: number;
-  calories_goal?: number;
+  calories_burned?: number;
   proteins_consumed?: number;
-  proteins_goal?: number;
   carbs_consumed?: number;
-  carbs_goal?: number;
   fats_consumed?: number;
-  fats_goal?: number;
+  bmr?: number;
+  tdee?: number;
+  calorie_balance?: number;
+  goal_feedback?: string;
+  calories_total?: number;
+  sport_total?: number;
+  num_meals?: number;
+  num_activities?: number;
+  has_data?: boolean;
+  target_calories?: number;
+  target_proteins_g?: number;
+  target_carbs_g?: number;
+  target_fats_g?: number;
 };
 
 const API = (path: string) => `/api${path}`;

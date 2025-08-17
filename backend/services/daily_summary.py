@@ -30,15 +30,16 @@ def update_daily_summary(user_id: str, date: str):
         summary = summary_resp.data[0] if summary_resp.data else None
 
         if summary:
-            calories_apportees = summary.get("calories_consumed", 0)
-            new_balance = calories_apportees - total_kcal
+            calories_consumed = summary.get("calories_consumed", 0)
+            new_balance = calories_consumed - total_kcal
 
-            supabase.table("daily_summary").update({
-                "calories_burned": total_kcal,
-                "sport_total": total_duree,
-                "calorie_balance": new_balance
-            }).eq("user_id", user_id).eq("date", date).execute()
+            supabase.table("daily_summary").update(
+                {
+                    "calories_burned": total_kcal,
+                    "sport_total": total_duree,
+                    "calorie_balance": new_balance,
+                }
+            ).eq("user_id", user_id).eq("date", date).execute()
     except Exception:
         # En cas d'erreur (ex: Supabase inaccessible), on ignore pour ne pas bloquer l'application
         return
-

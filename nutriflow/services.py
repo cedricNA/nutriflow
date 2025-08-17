@@ -2,8 +2,6 @@ import os
 import requests
 import pandas as pd
 import unicodedata
-import asyncio
-import inspect
 from typing import List, Dict, Optional
 from fastapi import HTTPException
 from datetime import date as dt_date, datetime
@@ -421,7 +419,7 @@ def convert_nutritionix_to_df(foods: List[Dict]) -> pd.DataFrame:
         rows.append(
             {
                 "Aliment": f.get("food_name", ""),
-                "Quantite": f"{f.get('serving_qty', 0)} {f.get('serving_unit','')}",
+                "Quantite": f"{f.get('serving_qty', 0)} {f.get('serving_unit', '')}",
                 "Poids_g": f.get("serving_weight_grams", 0),
                 "Calories": f.get("nf_calories", 0),
                 "Proteines_g": f.get("nf_protein", 0),
@@ -513,7 +511,9 @@ def ajuster_tdee(tdee_base: float, goal: str) -> float:
     return tdee_base
 
 
-def calculate_calorie_goal(tdee: Optional[float], objectif: Optional[str]) -> Optional[float]:
+def calculate_calorie_goal(
+    tdee: Optional[float], objectif: Optional[str]
+) -> Optional[float]:
     """Calcule l'objectif calorique selon l'objectif utilisateur."""
     if tdee is None:
         return None
@@ -527,7 +527,9 @@ def calculate_calorie_goal(tdee: Optional[float], objectif: Optional[str]) -> Op
     return round(goal)
 
 
-def calculate_macro_goals(poids_kg: Optional[float], calories_goal: Optional[float]) -> Dict[str, Optional[float]]:
+def calculate_macro_goals(
+    poids_kg: Optional[float], calories_goal: Optional[float]
+) -> Dict[str, Optional[float]]:
     """Calcule les objectifs journaliers de protéines, lipides et glucides."""
     if not poids_kg or not calories_goal:
         return {"proteins": None, "carbs": None, "fats": None}
@@ -585,11 +587,11 @@ def update_daily_summary(user_id: str, date: Optional[str] = None) -> Dict:
         meals = db.get_meals(user_id, date_str)
         num_meals = len(meals)
         print(f"Repas trouvés pour {date_str}: {meals}")
-        calories_apportees = prot_tot = gluc_tot = lip_tot = 0.0
+        calories_consumed = prot_tot = gluc_tot = lip_tot = 0.0
         for meal in meals:
             items = db.get_meal_items(meal.get("id"))
             for it in items:
-                calories_apportees += it.get("calories", 0) or 0
+                calories_consumed += it.get("calories", 0) or 0
                 prot_tot += it.get("proteines_g", 0) or 0
                 gluc_tot += it.get("glucides_g", 0) or 0
                 lip_tot += it.get("lipides_g", 0) or 0
@@ -597,7 +599,7 @@ def update_daily_summary(user_id: str, date: Optional[str] = None) -> Dict:
         activities = db.get_activities(user_id, date_str)
         num_activities = len(activities)
         print(f"Activités trouvées pour {date_str}: {activities}")
-        calories_brulees = sum(a.get("calories_brulees", 0) or 0 for a in activities)
+        calories_burned = sum(a.get("calories_brulees", 0) or 0 for a in activities)
         total_sport = sum(a.get("duree_min", 0) or 0 for a in activities)
 
         user = db.get_user(user_id) or {}
@@ -615,16 +617,14 @@ def update_daily_summary(user_id: str, date: Optional[str] = None) -> Dict:
                 user.get("sexe", "male"),
                 user.get("activity_factor", 1.2),
             )
-            tdee = ajuster_tdee(
-                tdee_base, user.get("goal") or user.get("objectif")
-            )
+            tdee = ajuster_tdee(tdee_base, user.get("goal") or user.get("objectif"))
         except Exception:
             bmr = user.get("bmr", 1500.0) or 1500.0
             tdee = user.get("tdee", 2000.0) or 2000.0
 
-        net_calories = calories_apportees - calories_brulees
+        net_calories = calories_consumed - calories_burned
         balance_calorique = net_calories - tdee
-        total_calories = calories_apportees + calories_brulees
+        total_calories = calories_consumed + calories_burned
         has_data = bool(num_meals or num_activities)
 
         objectif = user.get("goal") or user.get("objectif") or "maintien"
@@ -647,8 +647,8 @@ def update_daily_summary(user_id: str, date: Optional[str] = None) -> Dict:
         record = {
             "user_id": user_id,
             "date": date_str,
-            "calories_consumed": calories_apportees,
-            "calories_burned": calories_brulees,
+            "calories_consumed": calories_consumed,
+            "calories_burned": calories_burned,
             "proteins_consumed": prot_tot,
             "carbs_consumed": gluc_tot,
             "fats_consumed": lip_tot,
@@ -667,9 +667,9 @@ def update_daily_summary(user_id: str, date: Optional[str] = None) -> Dict:
 
         supabase = db.get_supabase_client()
         response = (
-            supabase.table("daily_summary").upsert(
-                record, on_conflict=["user_id", "date"]
-            ).execute()
+            supabase.table("daily_summary")
+            .upsert(record, on_conflict=["user_id", "date"])
+            .execute()
         )
         print(f"Réponse upsert daily_summary: {response}")
         if getattr(response, "error", None):
