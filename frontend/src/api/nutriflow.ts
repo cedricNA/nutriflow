@@ -8,25 +8,48 @@ export type UserProfile = {
   tdee?: number;
 };
 
+/**
+ * Interface DailySummary - Structure standardisée pour les résumés quotidiens
+ * IMPORTANT: Cette interface doit matcher exactement la table daily_summary
+ */
 export type DailySummary = {
-  calories_consumed?: number;
-  calories_burned?: number;
-  proteins_consumed?: number;
-  carbs_consumed?: number;
-  fats_consumed?: number;
-  bmr?: number;
-  tdee?: number;
-  calorie_balance?: number;
-  goal_feedback?: string;
-  calories_total?: number;
-  sport_total?: number;
-  num_meals?: number;
-  num_activities?: number;
-  has_data?: boolean;
-  target_calories?: number;
-  target_proteins_g?: number;
-  target_carbs_g?: number;
-  target_fats_g?: number;
+  // === Colonnes de consommation (données réelles) ===
+  calories_consumed: number;    // Calories consommées via repas (kcal)
+  proteins_consumed: number;    // Protéines consommées (g)
+  carbs_consumed: number;       // Glucides consommés (g)
+  fats_consumed: number;        // Lipides consommés (g)
+  
+  // === Colonnes d'objectifs (calculés) ===
+  calories_goal: number;        // Objectif calorique quotidien (kcal)
+  proteins_goal: number;        // Objectif protéines (g)
+  carbs_goal: number;           // Objectif glucides (g)
+  fats_goal: number;            // Objectif lipides (g)
+  
+  // === Colonnes de calcul ===
+  calories_burned?: number;     // Calories brûlées via exercices (kcal)
+  bmr?: number;                 // Métabolisme de base (kcal)
+  tdee?: number;                // TDEE total (kcal)
+  calorie_balance?: number;     // Balance calorique nette
+  
+  // === Colonnes de totaux (pour historique) ===
+  calories_total?: number;      // calories_consumed + calories_burned
+  sport_total?: number;         // Durée totale exercices (minutes)
+  
+  // === Colonnes de tracking ===
+  num_meals?: number;           // Nombre de repas
+  num_activities?: number;      // Nombre d'activités
+  has_data?: boolean;           // Indicateur de présence de données
+  
+  // === Colonnes targets (nouvelles) ===
+  target_calories?: number;     // Target alternatif calories
+  target_proteins_g?: number;   // Target alternatif protéines
+  target_carbs_g?: number;      // Target alternatif glucides
+  target_fats_g?: number;       // Target alternatif lipides
+  
+  // === Meta-données ===
+  goal_feedback?: string;       // Message de conseil personnalisé
+  last_updated?: string;        // Timestamp dernière mise à jour
+  created_at?: string;          // Timestamp de création
 };
 
 const API = (path: string) => `/api${path}`;

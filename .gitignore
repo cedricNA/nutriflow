@@ -6,3 +6,23 @@ __pycache__/
 frontend/node_modules/
 frontend/dist/
 .vscode/
+
+# Claude Code artefacts
+.claude/logs/
+.serena/
+
+# Test artefacts
+frontend/test-results/
+
+# Screenshot artefacts
+*.png
+screenshot*.js
+screenshot*.mjs
+
+# Documentation temporaire
+INITIAL.md
+DAILY_SUMMARY_ANALYSIS.md
+PRPs/
+
+# SQL migrations temporaires
+supabase/*.sql

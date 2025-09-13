@@ -15,12 +15,13 @@ def test_translate_with_csv_mapping(tmp_path, monkeypatch, capsys):
     services.reload_mapping(str(mapping_file))
 
     class DummyTranslator:
-        def translate(self, text, src='fr', dest='en'):
+        def translate(self, text, src="fr", dest="en"):
             assert text == "2 tablespoons of blueberry jam"
             return types.SimpleNamespace(text=text)
 
     import googletrans
-    monkeypatch.setattr(googletrans, 'Translator', lambda: DummyTranslator())
+
+    monkeypatch.setattr(googletrans, "Translator", lambda: DummyTranslator())
 
     result = services.translate_fr_en("2 cuillères à soupe de confiture de myrtille")
     captured = capsys.readouterr()
@@ -31,8 +32,9 @@ def test_translate_with_csv_mapping(tmp_path, monkeypatch, capsys):
 
 
 def test_unit_helpers():
-    services.reload_mapping(str(Path(__file__).resolve().parents[1] / "data" / "fr_en_mapping.csv"))
+    services.reload_mapping(
+        str(Path(__file__).resolve().parents[1] / "data" / "fr_en_mapping.csv")
+    )
     units = services.get_unit_variants()
     assert "cuil. a soupe" in units
     assert services.normalize_unit("cuil. à soupe") == "tablespoon"
-

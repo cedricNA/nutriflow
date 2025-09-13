@@ -20,7 +20,10 @@ def test_update_daily_summary_dynamic(monkeypatch):
 
         def upsert(self, record, **_):
             for i, rec in enumerate(self.store):
-                if rec["user_id"] == record["user_id"] and rec["date"] == record["date"]:
+                if (
+                    rec["user_id"] == record["user_id"]
+                    and rec["date"] == record["date"]
+                ):
                     self.store[i] = record
                     break
             else:
@@ -30,7 +33,9 @@ def test_update_daily_summary_dynamic(monkeypatch):
         def execute(self):
             if self.filters:
                 data = [
-                    r for r in self.store if all(r.get(k) == v for k, v in self.filters.items())
+                    r
+                    for r in self.store
+                    if all(r.get(k) == v for k, v in self.filters.items())
                 ]
             else:
                 data = self.store
@@ -82,7 +87,9 @@ def test_update_daily_summary_dynamic(monkeypatch):
 
     # Ajout d'une activité
     monkeypatch.setattr(
-        db, "get_activities", lambda *_, **__: [{"calories_brulees": 200, "duree_min": 30}]
+        db,
+        "get_activities",
+        lambda *_, **__: [{"calories_brulees": 200, "duree_min": 30}],
     )
     services.update_daily_summary("u1", "2024-01-01")
     assert store[0]["calories_burned"] == 200

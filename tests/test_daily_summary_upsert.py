@@ -38,25 +38,35 @@ def test_daily_summary_meal_activity(monkeypatch):
     monkeypatch.setattr(db, "get_user", lambda *_: user)
     monkeypatch.setattr(services, "calculer_bmr", lambda *a, **k: 1500.0)
     monkeypatch.setattr(services, "calculer_tdee", lambda *a, **k: 1800.0)
-    monkeypatch.setattr(router, "compute_goals", lambda u, t: {
-        "target_kcal": 2000.0,
-        "prot_g": 120.0,
-        "fat_g": 60.0,
-        "carbs_g": 200.0,
-    })
+    monkeypatch.setattr(
+        router,
+        "compute_goals",
+        lambda u, t: {
+            "target_kcal": 2000.0,
+            "prot_g": 120.0,
+            "fat_g": 60.0,
+            "carbs_g": 200.0,
+        },
+    )
 
     monkeypatch.setattr(db, "get_meals", lambda *a, **k: [{"id": "m1"}])
-    monkeypatch.setattr(db, "get_meal_items", lambda *a, **k: [
-        {
-            "calories": 500.0,
-            "proteines_g": 30.0,
-            "glucides_g": 50.0,
-            "lipides_g": 20.0,
-        }
-    ])
-    monkeypatch.setattr(db, "get_activities", lambda *a, **k: [
-        {"calories_brulees": 200.0, "duree_min": 30.0}
-    ])
+    monkeypatch.setattr(
+        db,
+        "get_meal_items",
+        lambda *a, **k: [
+            {
+                "calories": 500.0,
+                "proteines_g": 30.0,
+                "glucides_g": 50.0,
+                "lipides_g": 20.0,
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        db,
+        "get_activities",
+        lambda *a, **k: [{"calories_brulees": 200.0, "duree_min": 30.0}],
+    )
 
     services.update_daily_summary("u1", "2024-01-01")
     assert store, "daily_summary not upserted"

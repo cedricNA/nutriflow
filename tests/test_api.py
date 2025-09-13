@@ -21,7 +21,6 @@ from nutriflow.api.router import (
     TDEEQuery,
     NutritionixResponse,
     OFFProduct,
-    ExerciseResult,
     BMRResponse,
     TDEResponse,
     DailySummary,
@@ -274,7 +273,7 @@ def test_barcode_unit(monkeypatch):
         def table(self, *_):
             return self
 
-        def upsert(self, *_ , **__):
+        def upsert(self, *_, **__):
             return self
 
         def execute(self):
@@ -458,7 +457,7 @@ def test_barcode_integration_structure(monkeypatch):
             def table(self, *_):
                 return self
 
-            def upsert(self, *_ , **__):
+            def upsert(self, *_, **__):
                 return self
 
             def execute(self):
@@ -494,7 +493,11 @@ def test_search_integration_structure():
             assert res.status_code in (200, 404)
             if res.status_code == 200:
                 data = res.json()
-                assert "barcode" in data and "name" in data and "energy_kcal_per_100g" in data
+                assert (
+                    "barcode" in data
+                    and "name" in data
+                    and "energy_kcal_per_100g" in data
+                )
 
     run_async(inner())
 
@@ -777,8 +780,12 @@ def test_edit_meal_update_type(monkeypatch):
         record.update(data)
 
     monkeypatch.setattr(db, "update_meal", fake_update)
-    monkeypatch.setattr(router, "get_meal", lambda *a, **k: {"id": "meal123", "type": "diner"})
-    monkeypatch.setattr(db, "get_meal", lambda *a, **k: {"id": "meal123", "type": "diner"})
+    monkeypatch.setattr(
+        router, "get_meal", lambda *a, **k: {"id": "meal123", "type": "diner"}
+    )
+    monkeypatch.setattr(
+        db, "get_meal", lambda *a, **k: {"id": "meal123", "type": "diner"}
+    )
     monkeypatch.setattr(db, "get_meal_items", lambda *a, **k: [])
     payload = router.MealPatchPayload(type="diner")
     resp = router.edit_meal("meal123", payload)

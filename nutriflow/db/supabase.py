@@ -1,5 +1,5 @@
 import os
-from supabase import create_client, Client
+from supabase import create_client
 from postgrest.exceptions import APIError
 
 
@@ -130,9 +130,7 @@ def update_meal(meal_id, data):
 def update_meal_item(item_id, data):
     """Met à jour un aliment d'un repas."""
     supabase = get_supabase_client()
-    response = (
-        supabase.table("meal_items").update(data).eq("id", item_id).execute()
-    )
+    response = supabase.table("meal_items").update(data).eq("id", item_id).execute()
     return response.data[0] if response.data else None
 
 
@@ -325,9 +323,7 @@ def get_user(user_id):
 def get_product(barcode: str):
     """Récupère un produit depuis la table `products` via son code-barres."""
     supabase = get_supabase_client()
-    response = (
-        supabase.table("products").select("*").eq("barcode", barcode).execute()
-    )
+    response = supabase.table("products").select("*").eq("barcode", barcode).execute()
     return response.data[0] if response.data else None
 
 
@@ -361,9 +357,8 @@ def aggregate_daily_summary(user_id: str, date: str):
     if not user:
         raise Exception("Utilisateur non trouvé")
 
-    from nutriflow.services import calculer_bmr, calculer_tdee, ajuster_tdee
+    from nutriflow.services import calculer_tdee, ajuster_tdee
 
-    bmr = calculer_bmr(user["poids_kg"], user["taille_cm"], user["age"], user["sexe"])
     tdee_base = calculer_tdee(
         user["poids_kg"],
         user["taille_cm"],
@@ -371,7 +366,9 @@ def aggregate_daily_summary(user_id: str, date: str):
         user["sexe"],
         user.get("activity_factor", 1.2),
     )
-    tdee_user = ajuster_tdee(tdee_base, user.get("goal") or user.get("objectif", "maintien"))
+    tdee_user = ajuster_tdee(
+        tdee_base, user.get("goal") or user.get("objectif", "maintien")
+    )
     tdee = tdee_user + calories_brulees
 
     # 4. Balance calorique

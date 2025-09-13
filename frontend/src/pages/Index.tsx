@@ -8,7 +8,7 @@ import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet';
 import { useDashboardData } from '@/hooks/use-dashboard-data';
 import { QuickActions } from '@/components/QuickActions';
 import { MacroProgress } from '@/components/MacroProgress';
-import { DashboardCard } from '@/components/DashboardCard';
+import { CaloriesProgress } from '@/components/CaloriesProgress';
 import { Skeleton } from '@/components/ui/skeleton';
 
 function useIsMobile() {
@@ -41,8 +41,6 @@ const Index = () => {
   const tdeeTarget = Math.round(data?.targetCalories ?? 0);
   const goalLabel = profile ? goalLabels[profile.goal ?? ''] ?? profile.goal ?? 'Indéfini' : 'Indéfini';
 
-  const caloriesConsumed = summary?.calories_consumed ?? 0;
-  const caloriesGoal = summary?.calories_goal ?? 0;
 
   const macros = {
     protein: { current: summary?.proteins_consumed ?? 0, target: summary?.proteins_goal },
@@ -182,12 +180,9 @@ const Index = () => {
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
-                <DashboardCard
-                  title="Calories consommées"
-                  value={caloriesConsumed}
-                  goal={caloriesGoal}
-                  unit="kcal"
-                  variant="calories"
+                <CaloriesProgress
+                  dailySummary={summary ?? {}}
+                  className="w-full"
                 />
                 <MacroProgress
                   protein={macros.protein}

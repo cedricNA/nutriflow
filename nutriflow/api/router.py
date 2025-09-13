@@ -1,8 +1,5 @@
-import os
-import requests
-import pandas as pd
-import unicodedata
 from typing import List, Dict, Optional
+from datetime import date
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from nutriflow.db.supabase import (
@@ -10,12 +7,6 @@ from nutriflow.db.supabase import (
     get_meal,
 )
 import nutriflow.db.supabase as db
-
-# ID utilisateur générique pour les tests/démo (doit être un UUID valide)
-TEST_USER_ID = "00000000-0000-0000-0000-000000000000"
-from datetime import date
-
-
 from nutriflow.services import (
     analyze_ingredients_nutritionix,
     get_off_search_nutrition,
@@ -26,7 +17,6 @@ from nutriflow.services import (
     calculer_bmr,
     calculer_tdee,
     ajuster_tdee,
-    calculate_calorie_goal,
     calculate_macro_goals,
     SPORTS_MAPPING,
     get_unit_variants,
@@ -34,6 +24,9 @@ from nutriflow.services import (
     add_meal_item,
     update_daily_summary,
 )
+
+# ID utilisateur générique pour les tests/démo (doit être un UUID valide)
+TEST_USER_ID = "00000000-0000-0000-0000-000000000000"
 
 router = APIRouter()
 
@@ -106,10 +99,11 @@ class IngredientQuery(BaseModel):
     )
 
 
-
 class BarcodeQuery(BaseModel):
     barcode: str = Field(
-        ..., pattern=r"^\d{8,}$", description="Code-barres du produit (au moins 8 chiffres)"
+        ...,
+        pattern=r"^\d{8,}$",
+        description="Code-barres du produit (au moins 8 chiffres)",
     )
     quantity: float = Field(100.0, gt=0, description="Quantité du produit (g)")
     meal_id: Optional[str] = Field(
@@ -121,7 +115,9 @@ class BarcodeQueryUserInput(BaseModel):
     """Modèle simplifié pour l'ajout d'un produit via code-barres."""
 
     barcode: str = Field(
-        ..., pattern=r"^\d{8,}$", description="Code-barres du produit (au moins 8 chiffres)"
+        ...,
+        pattern=r"^\d{8,}$",
+        description="Code-barres du produit (au moins 8 chiffres)",
     )
     quantity: float = Field(..., gt=0, description="Quantité du produit (g)")
     type: str = Field(
@@ -280,9 +276,7 @@ class TDEResponse(BaseModel):
     bmr: float = Field(..., description="Métabolisme de base calculé (kcal)")
     activity_factor: float = Field(..., description="Facteur d'activité utilisé")
     tdee_base: float = Field(..., description="TDEE de base (kcal)")
-    tdee: float = Field(
-        ..., description="TDEE ajusté selon l'objectif (kcal)"
-    )
+    tdee: float = Field(..., description="TDEE ajusté selon l'objectif (kcal)")
 
 
 class DailySummary(BaseModel):
@@ -295,14 +289,31 @@ class DailySummary(BaseModel):
 
 
 class DailyNutritionSummary(BaseModel):
-    calories_consumed: Optional[float] = None
-    calories_goal: Optional[float] = None
-    proteins_consumed: Optional[float] = None
-    proteins_goal: Optional[float] = None
-    carbs_consumed: Optional[float] = None
-    carbs_goal: Optional[float] = None
-    fats_consumed: Optional[float] = None
-    fats_goal: Optional[float] = None
+    """
+    Réponse API pour les résumés quotidiens nutritionnels
+    IMPORTANT: Doit matcher exactement DailySummary TypeScript et la table daily_summary
+    """
+    # === Colonnes de consommation (données réelles) ===
+    calories_consumed: float = Field(default=0, description="Calories consommées via repas (kcal)")
+    proteins_consumed: float = Field(default=0, description="Protéines consommées (g)")  
+    carbs_consumed: float = Field(default=0, description="Glucides consommés (g)")
+    fats_consumed: float = Field(default=0, description="Lipides consommés (g)")
+    
+    # === Colonnes d'objectifs (calculés) ===
+    calories_goal: float = Field(default=0, description="Objectif calorique quotidien (kcal)")
+    proteins_goal: float = Field(default=0, description="Objectif protéines (g)")
+    carbs_goal: float = Field(default=0, description="Objectif glucides (g)")  
+    fats_goal: float = Field(default=0, description="Objectif lipides (g)")
+    
+    # === Colonnes optionnelles étendues ===
+    calories_burned: Optional[float] = Field(default=None, description="Calories brûlées via exercices (kcal)")
+    bmr: Optional[float] = Field(default=None, description="Métabolisme de base (kcal)")
+    tdee: Optional[float] = Field(default=None, description="TDEE total (kcal)")
+    calorie_balance: Optional[float] = Field(default=None, description="Balance calorique nette")
+    calories_total: Optional[float] = Field(default=None, description="calories_consumed + calories_burned")
+    sport_total: Optional[float] = Field(default=None, description="Durée totale exercices (minutes)")
+    goal_feedback: Optional[str] = Field(default=None, description="Message de conseil personnalisé")
+    has_data: Optional[bool] = Field(default=None, description="Indicateur de présence de données")
 
 
 class GoalRatios(BaseModel):
@@ -386,9 +397,7 @@ def barcode(data: BarcodeQueryUserInput):
 
     # === Upsert automatique dans la table products ===
     supabase = db.get_supabase_client()
-    supabase.table("products").upsert(
-        prod, on_conflict=["barcode"]
-    ).execute()
+    supabase.table("products").upsert(prod, on_conflict=["barcode"]).execute()
     # === Fin upsert automatique ===
 
     user_id = TEST_USER_ID
@@ -438,7 +447,7 @@ def product_details(barcode: str):
 
 @router.get("/search", response_model=OFFProduct)
 def search(
-    query: str = Query(..., min_length=1, description="Terme de recherche produit")
+    query: str = Query(..., min_length=1, description="Terme de recherche produit"),
 ):
     """
     Recherche un produit sur OpenFoodFacts par terme.
@@ -571,7 +580,9 @@ def get_goals():
         user["sexe"],
         user.get("activity_factor", 1.2),
     )
-    tdee_user = ajuster_tdee(tdee_base, user.get("goal") or user.get("objectif", "maintien"))
+    tdee_user = ajuster_tdee(
+        tdee_base, user.get("goal") or user.get("objectif", "maintien")
+    )
     tdee = tdee_user + calories_brulees
 
     goals = compute_goals(user, tdee)
@@ -602,7 +613,7 @@ def get_goals():
 
 @router.get("/daily-summary", response_model=DailyNutritionSummary)
 def daily_summary(
-    date_str: str = Query(default=None, description="Date au format YYYY-MM-DD")
+    date_str: str = Query(default=None, description="Date au format YYYY-MM-DD"),
 ):
     """Retourne l'apport actuel et les objectifs calories/macros pour la date donnée."""
     user_id = TEST_USER_ID
@@ -934,13 +945,16 @@ def remove_meal_item(item_id: str):
         if item:
             meal = db.get_meal(item.get("meal_id"))
             if meal:
-                update_daily_summary(meal.get("user_id", TEST_USER_ID), meal.get("date"))
+                update_daily_summary(
+                    meal.get("user_id", TEST_USER_ID), meal.get("date")
+                )
     except Exception:
         pass
     return {"status": "deleted"}
 
 
 # ----- Activities Management -----
+
 
 @router.get("/activities")
 def list_activities(

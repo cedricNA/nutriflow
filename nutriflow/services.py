@@ -5,12 +5,22 @@ import unicodedata
 from typing import List, Dict, Optional
 from fastapi import HTTPException
 from datetime import date as dt_date, datetime
+from dotenv import load_dotenv
 
 import nutriflow.db.supabase as db
+
+# S'assurer que .env est chargé AVANT de récupérer les variables
+load_dotenv()
 
 # Retrieve Nutritionix credentials from environment variables
 APP_ID = os.getenv("NUTRIFLOW_NUTRITIONIX_APP_ID")
 API_KEY = os.getenv("NUTRIFLOW_NUTRITIONIX_API_KEY")
+
+# Test des clés Nutritionix au démarrage
+if APP_ID and API_KEY:
+    print(f"✅ Nutritionix API configurée - APP_ID: {APP_ID[:4]}****** | API_KEY: {API_KEY[:8]}******")
+else:
+    print(f"❌ Nutritionix API non configurée - APP_ID: {APP_ID} | API_KEY: {API_KEY}")
 
 # Mapping manuel des activités sportives FR ➔ EN
 SPORTS_MAPPING: Dict[str, str] = {
@@ -666,11 +676,45 @@ def update_daily_summary(user_id: str, date: Optional[str] = None) -> Dict:
         }
 
         supabase = db.get_supabase_client()
-        response = (
-            supabase.table("daily_summary")
-            .upsert(record, on_conflict=["user_id", "date"])
-            .execute()
-        )
+        
+        # WORKAROUND: Gérer manuellement l'upsert car PRIMARY KEY manquante
+        try:
+            # D'abord essayer de mettre à jour un enregistrement existant
+            existing = (
+                supabase.table("daily_summary")
+                .select("*")
+                .eq("user_id", user_id)
+                .eq("date", date_str)
+                .execute()
+            )
+            
+            if existing.data:
+                # Update existant
+                response = (
+                    supabase.table("daily_summary")
+                    .update(record)
+                    .eq("user_id", user_id)
+                    .eq("date", date_str)
+                    .execute()
+                )
+                print(f"📝 daily_summary mis à jour (UPDATE): {response}")
+            else:
+                # Insert nouveau
+                response = (
+                    supabase.table("daily_summary")
+                    .insert(record)
+                    .execute()
+                )
+                print(f"📝 daily_summary créé (INSERT): {response}")
+                
+        except Exception as e:
+            print(f"Erreur manual upsert: {e}")
+            # Fallback: essayer insert simple
+            response = (
+                supabase.table("daily_summary")
+                .insert(record)
+                .execute()
+            )
         print(f"Réponse upsert daily_summary: {response}")
         if getattr(response, "error", None):
             raise HTTPException(
