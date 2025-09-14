@@ -611,7 +611,7 @@ def get_goals():
     return GoalsResponse(**goals, tdee=tdee, objectif=objectif)
 
 
-@router.get("/daily-summary", response_model=DailyNutritionSummary)
+@router.get("/daily-summary")
 def daily_summary(
     date_str: str = Query(default=None, description="Date au format YYYY-MM-DD"),
 ):
@@ -620,21 +620,29 @@ def daily_summary(
     d = date_str if date_str else str(date.today())
 
     totals = db.get_daily_nutrition(user_id, d) or {}
-    calories_cons = totals.get("total_calories")
-    prot_cons = totals.get("total_proteins_g")
-    carb_cons = totals.get("total_carbs_g")
-    fat_cons = totals.get("total_fats_g")
+    calories_cons = totals.get("total_calories") or 0
+    prot_cons = totals.get("total_proteins_g") or 0
+    carb_cons = totals.get("total_carbs_g") or 0
+    fat_cons = totals.get("total_fats_g") or 0
 
     user = db.get_user(user_id)
     if not user:
-        return DailyNutritionSummary(
-            calories_consumed=calories_cons,
-            proteins_consumed=prot_cons,
-            carbs_consumed=carb_cons,
-            fats_consumed=fat_cons,
-        )
+        return {
+            "calories_consumed": calories_cons,
+            "proteins_consumed": prot_cons,
+            "carbs_consumed": carb_cons,
+            "fats_consumed": fat_cons,
+        }
 
+    # Calculer BMR et TDEE
     try:
+        from nutriflow.services import calculer_bmr
+        bmr = calculer_bmr(
+            user["poids_kg"],
+            user["taille_cm"],
+            user["age"],
+            user["sexe"],
+        )
         tdee_base = calculer_tdee(
             user["poids_kg"],
             user["taille_cm"],
@@ -644,21 +652,66 @@ def daily_summary(
         )
         tdee_val = ajuster_tdee(tdee_base, user.get("goal", "maintien"))
     except Exception:
+        bmr = None
         tdee_val = None
 
     cal_goal = tdee_val
     macros_goal = calculate_macro_goals(user.get("poids_kg"), cal_goal)
 
-    return DailyNutritionSummary(
-        calories_consumed=calories_cons,
-        calories_goal=cal_goal,
-        proteins_consumed=prot_cons,
-        proteins_goal=macros_goal.get("proteins"),
-        carbs_consumed=carb_cons,
-        carbs_goal=macros_goal.get("carbs"),
-        fats_consumed=fat_cons,
-        fats_goal=macros_goal.get("fats"),
-    )
+    # Récupérer les données d'activités pour calories_burned
+    try:
+        supabase = db.get_supabase_client()
+        activities = supabase.table("activities").select("calories_brulees").eq("user_id", user_id).eq("date", d).execute()
+        calories_burned = sum(a.get("calories_brulees", 0) for a in (activities.data or []))
+    except Exception:
+        calories_burned = 0
+
+    # Calculer calorie_balance
+    calorie_balance = None
+    if cal_goal and calories_cons is not None:
+        calorie_balance = calories_cons - cal_goal + calories_burned
+
+    # Générer goal_feedback
+    goal_feedback = None
+    if calorie_balance is not None and cal_goal:
+        objectif = (user.get("goal") or "maintien").lower()
+        if objectif == "perte":
+            if calorie_balance < -200:
+                goal_feedback = "Excellent déficit pour une perte de poids saine"
+            elif calorie_balance < 0:
+                goal_feedback = "Bon déficit, continuez ainsi"
+            else:
+                goal_feedback = "Surplus calorique - ajustez votre alimentation"
+        elif objectif == "prise":
+            if calorie_balance > 200:
+                goal_feedback = "Bon surplus pour une prise de masse"
+            elif calorie_balance > 0:
+                goal_feedback = "Léger surplus, idéal pour la prise de muscle"
+            else:
+                goal_feedback = "Déficit calorique - augmentez votre apport"
+        else:  # maintien
+            if abs(calorie_balance) < 100:
+                goal_feedback = "Balance parfaite pour maintenir votre poids"
+            elif calorie_balance > 100:
+                goal_feedback = "Léger surplus - surveillez votre poids"
+            else:
+                goal_feedback = "Léger déficit - surveillez votre énergie et hydratation"
+
+    return {
+        "calories_consumed": calories_cons,
+        "proteins_consumed": prot_cons,
+        "carbs_consumed": carb_cons,
+        "fats_consumed": fat_cons,
+        "calories_burned": calories_burned,
+        "bmr": bmr,
+        "tdee": tdee_val,
+        "calorie_balance": calorie_balance,
+        "goal_feedback": goal_feedback,
+        "target_calories": cal_goal,
+        "target_proteins_g": macros_goal.get("proteins") if macros_goal else None,
+        "target_carbs_g": macros_goal.get("carbs") if macros_goal else None,
+        "target_fats_g": macros_goal.get("fats") if macros_goal else None,
+    }
 
 
 @router.post("/daily-summary/update")

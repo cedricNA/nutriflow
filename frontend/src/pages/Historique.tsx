@@ -6,12 +6,6 @@ import {
   CardTitle,
   CardContent,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
@@ -23,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
+import { DailyInsightCard } from "@/components/DailyInsightCard";
 import {
   fetchMeals,
   fetchActivities,
@@ -47,22 +42,6 @@ const Historique = () => {
   });
 
   const [openMeal, setOpenMeal] = useState<string | null>(null);
-
-  const totalBurned = activities?.reduce((acc, a) => acc + a.calories_brulees, 0) ?? 0;
-  const balance =
-    (summary?.calories_consumed ?? 0) -
-    totalBurned -
-    (summary?.calories_goal ?? 0);
-
-  const macroBadge = (
-    current?: number,
-    goal?: number,
-    label?: string
-  ) => (
-    <Badge variant={current && goal && current >= goal ? "default" : "outline"}>
-      {label}: {Math.round(current ?? 0)}g {goal && current && current >= goal ? "🟢" : "🔵"}
-    </Badge>
-  );
 
   return (
     <div className="min-h-screen flex w-full bg-background">
@@ -98,39 +77,13 @@ const Historique = () => {
             </Popover>
           </div>
 
-          <Card className="shadow-soft">
-            <CardHeader>
-              <CardTitle>Résumé de la journée</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex flex-wrap gap-4">
-                <div>
-                  <strong>Calories :</strong> {Math.round(summary?.calories_consumed ?? 0)} / {Math.round(summary?.calories_goal ?? 0)}
-                </div>
-                <div>
-                  <strong>Sport :</strong> {Math.round(totalBurned)} kcal brûlées
-                </div>
-                <div>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="underline decoration-dotted cursor-help">
-                        Balance : {Math.round(balance)} kcal
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>Apport - sport - objectif</TooltipContent>
-                  </Tooltip>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {macroBadge(summary?.proteins_consumed, summary?.proteins_goal, "Protéines")}
-                {macroBadge(summary?.carbs_consumed, summary?.carbs_goal, "Glucides")}
-                {macroBadge(summary?.fats_consumed, summary?.fats_goal, "Lipides")}
-              </div>
-              {summary?.conseil && (
-                <p className="text-sm italic pt-2">{summary.conseil}</p>
-              )}
-            </CardContent>
-          </Card>
+          {summary && (
+            <DailyInsightCard
+              dailySummary={summary}
+              date={dateStr}
+              className="shadow-soft"
+            />
+          )}
 
           <Tabs defaultValue="meals" className="w-full">
             <TabsList className="grid w-full grid-cols-2">

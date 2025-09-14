@@ -10,13 +10,39 @@ def test_daily_summary_meal_activity(monkeypatch):
     class DummyTable:
         def __init__(self, store):
             self.store = store
+            self.filters = {}
+
+        def select(self, *_):
+            return self
+
+        def eq(self, key, value):
+            self.filters[key] = value
+            return self
+
+        def update(self, record):
+            # Trouve et met à jour l'enregistrement existant
+            for i, rec in enumerate(self.store):
+                if all(rec.get(k) == v for k, v in self.filters.items()):
+                    self.store[i] = {**rec, **record}
+                    break
+            return self
+
+        def insert(self, record):
+            self.store.append(record)
+            return self
 
         def upsert(self, record, **_):
             self.store.append(record)
             return self
 
         def execute(self):
-            return types.SimpleNamespace(data=self.store)
+            if self.filters:
+                # Retour filtré pour select
+                data = [r for r in self.store if all(r.get(k) == v for k, v in self.filters.items())]
+                return types.SimpleNamespace(data=data)
+            else:
+                # Retour complet pour insert/update
+                return types.SimpleNamespace(data=self.store)
 
     class DummyClient:
         def __init__(self, store):

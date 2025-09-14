@@ -18,6 +18,18 @@ def test_update_daily_summary_dynamic(monkeypatch):
             self.filters[key] = value
             return self
 
+        def update(self, record):
+            # Trouve et met à jour l'enregistrement existant  
+            for i, rec in enumerate(self.store):
+                if all(rec.get(k) == v for k, v in self.filters.items()):
+                    self.store[i] = {**rec, **record}
+                    break
+            return self
+
+        def insert(self, record):
+            self.store.append(record)
+            return self
+
         def upsert(self, record, **_):
             for i, rec in enumerate(self.store):
                 if (
@@ -37,6 +49,8 @@ def test_update_daily_summary_dynamic(monkeypatch):
                     for r in self.store
                     if all(r.get(k) == v for k, v in self.filters.items())
                 ]
+                # Reset filters après utilisation
+                self.filters = {}
             else:
                 data = self.store
             return types.SimpleNamespace(data=data)
