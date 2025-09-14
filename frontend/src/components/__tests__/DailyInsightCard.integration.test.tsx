@@ -27,9 +27,9 @@ describe('DailyInsightCard - Real Data Integration', () => {
     // Vérifier le titre et la date
     expect(screen.getByText(/Bilan Quotidien - samedi 13 septembre 2025/)).toBeInTheDocument();
 
-    // Vérifier la balance calorique
-    expect(screen.getByText(/Balance Calorique: -1808 kcal/)).toBeInTheDocument();
-    expect(screen.getByText(/Déficit calorique/)).toBeInTheDocument();
+    // Vérifier le solde énergétique (formule scientifique PRP : 230 - 0 = +230 kcal)
+    expect(screen.getByText(/Solde Énergétique: \+230 kcal/)).toBeInTheDocument();
+    expect(screen.getByText(/Surplus calorique/)).toBeInTheDocument();
 
     // Vérifier le goal feedback
     expect(screen.getByText("Léger déficit - surveillez votre énergie et hydratation")).toBeInTheDocument();

@@ -9,6 +9,7 @@ vi.mock('@/hooks/use-daily-summary', () => ({
   useDailySummary: vi.fn(() => ({
     data: {
       calories_consumed: 1500,
+      calories_burned: 2200, // Pour avoir un solde de 1500 - 2200 = -700 kcal
       target_calories: 2200,
       calorie_balance: -700,
       proteins_consumed: 80,
@@ -62,7 +63,7 @@ describe('Historique Page Integration', () => {
 
     // Vérifier que le DailyInsightCard est rendu avec les bonnes données
     expect(screen.getByText(/Bilan Quotidien/)).toBeInTheDocument();
-    expect(screen.getByText(/Balance Calorique: -700 kcal/)).toBeInTheDocument();
+    expect(screen.getByText(/Solde Énergétique: -700 kcal/)).toBeInTheDocument();
     expect(screen.getByText(/Déficit calorique/)).toBeInTheDocument();
 
     // Vérifier les écarts macros

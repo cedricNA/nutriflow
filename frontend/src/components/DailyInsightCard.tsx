@@ -11,12 +11,19 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   TrendingDown,
   TrendingUp,
   Minus,
   Lightbulb,
   Activity,
-  Target
+  Target,
+  Info
 } from "lucide-react";
 import type { DailySummary } from "@/services/api";
 
@@ -36,8 +43,10 @@ interface MacroDeviation {
  * Données calculées pour l'affichage du bilan quotidien enrichi
  */
 interface DailyInsightData {
-  /** Balance calorique : calories_consumed - calories_burned */
+  /** Solde énergétique quotidien : calories_consumed - calories_burned */
   calorieBalance: number;
+  /** Écart par rapport aux besoins physiologiques : solde - besoins_restants */
+  needsDeficit?: number;
   /** Statut de la balance : deficit (<-100), surplus (>100), balanced (-100 à 100) */
   balanceStatus: 'deficit' | 'surplus' | 'balanced';
   /** Feedback personnalisé du système basé sur les objectifs utilisateur */
@@ -152,17 +161,23 @@ function getStatusEmoji(status: 'good' | 'warning' | 'danger') {
  * Composant de bilan quotidien enrichi pour l'historique nutritionnel.
  *
  * Affiche un bilan complet du jour avec :
- * - Balance calorique principale avec visualisation
+ * - Solde énergétique quotidien avec visualisation et tooltip
+ * - Écart vs besoins physiologiques avec guidance différenciée
  * - Goal feedback du système pour guidance comportementale
  * - Écarts par rapport aux objectifs macronutriments en pourcentage
  * - Statut global (déficit/surplus/équilibré) avec codes couleur
  * - Contexte métabolique (BMR, TDEE) pour éducation utilisateur
  *
- * Formules scientifiques :
- * - Balance calorique : calories_consumed - calories_burned
+ * Formules scientifiques selon PRP :
+ * - Solde énergétique quotidien : calories_consumed - calories_burned
+ * - Écart vs besoins : solde - (TDEE - calories_burned)
  * - Écarts macros : ((consommé - objectif) / objectif) * 100
  * - Seuils statuts : <10% = bon, 10-25% = attention, >25% = danger
  * - Seuils balance : <-100 = déficit, >100 = surplus, entre = équilibré
+ *
+ * Tooltips explicatifs :
+ * - Solde énergétique : "Différence entre calories consommées et brûlées par le sport"
+ * - Écart besoins : "Calories manquantes pour couvrir vos besoins quotidiens totaux"
  *
  * @param dailySummary - Données complètes de résumé quotidien depuis l'API
  * @param date - Date au format YYYY-MM-DD pour affichage formaté
@@ -170,11 +185,19 @@ function getStatusEmoji(status: 'good' | 'warning' | 'danger') {
  */
 export function DailyInsightCard({ dailySummary, date, className }: DailyInsightCardProps) {
   const insightData = useMemo((): DailyInsightData => {
-    const calorieBalance = dailySummary.calorie_balance ?? 0;
+    // Formule scientifique PRP : Solde énergétique = calories_consumed - calories_burned
+    const calorieBalance = (dailySummary.calories_consumed ?? 0) - (dailySummary.calories_burned ?? 0);
     const balanceStatus = getBalanceStatus(calorieBalance);
+
+    // Formule scientifique PRP : Écart vs besoins = solde - besoins_restants
+    // besoins_restants = TDEE - calories_burned
+    const needsDeficit = dailySummary.tdee && dailySummary.calories_burned !== undefined
+      ? calorieBalance - (dailySummary.tdee - (dailySummary.calories_burned ?? 0))
+      : undefined;
 
     return {
       calorieBalance,
+      needsDeficit,
       balanceStatus,
       goalFeedback: dailySummary.goal_feedback,
       macroDeviations: {
@@ -219,21 +242,60 @@ export function DailyInsightCard({ dailySummary, date, className }: DailyInsight
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Balance Calorique Principale */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            {getBalanceIcon(insightData.balanceStatus)}
-            <span className="text-lg font-semibold">
-              Balance Calorique: {insightData.calorieBalance > 0 ? '+' : ''}{Math.round(insightData.calorieBalance)} kcal
-            </span>
+        {/* Métriques Énergétiques Principales */}
+        <TooltipProvider>
+          <div className="space-y-4">
+            {/* Solde Énergétique */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                {getBalanceIcon(insightData.balanceStatus)}
+                <span className="text-lg font-semibold">
+                  Solde Énergétique: {insightData.calorieBalance > 0 ? '+' : ''}{Math.round(insightData.calorieBalance)} kcal
+                </span>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" data-testid="info-icon" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Différence entre calories consommées et brûlées par le sport</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Progress value={progressValue} className="h-3" />
+              <div className="text-sm text-muted-foreground text-center">
+                {insightData.balanceStatus === 'deficit' && 'Déficit calorique'}
+                {insightData.balanceStatus === 'surplus' && 'Surplus calorique'}
+                {insightData.balanceStatus === 'balanced' && 'Balance équilibrée'}
+              </div>
+            </div>
+
+            {/* Écart vs Besoins Physiologiques */}
+            {insightData.needsDeficit !== undefined && (
+              <div className="bg-muted/50 rounded-lg p-3">
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-blue-600" />
+                  <span className="text-base font-medium text-blue-800">
+                    Écart vs besoins: {insightData.needsDeficit > 0 ? '+' : ''}{Math.round(insightData.needsDeficit)} kcal
+                  </span>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" data-testid="info-icon" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Calories manquantes pour couvrir vos besoins quotidiens totaux</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <div className="text-sm text-muted-foreground mt-1 ml-6">
+                  {insightData.needsDeficit < -500 && 'Déficit important - Alimentation supplémentaire nécessaire'}
+                  {insightData.needsDeficit >= -500 && insightData.needsDeficit < -100 && 'Déficit modéré'}
+                  {insightData.needsDeficit >= -100 && insightData.needsDeficit <= 100 && 'Besoins bien couverts'}
+                  {insightData.needsDeficit > 100 && 'Surplus par rapport aux besoins totaux'}
+                </div>
+              </div>
+            )}
           </div>
-          <Progress value={progressValue} className="h-3" />
-          <div className="text-sm text-muted-foreground text-center">
-            {insightData.balanceStatus === 'deficit' && 'Déficit calorique'}
-            {insightData.balanceStatus === 'surplus' && 'Surplus calorique'}
-            {insightData.balanceStatus === 'balanced' && 'Balance équilibrée'}
-          </div>
-        </div>
+        </TooltipProvider>
 
         {/* Goal Feedback */}
         {insightData.goalFeedback && (

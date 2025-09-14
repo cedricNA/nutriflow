@@ -6,6 +6,7 @@ import type { DailySummary } from '@/services/api';
 describe('DailyInsightCard', () => {
   const createMockSummary = (overrides: Partial<DailySummary> = {}): DailySummary => ({
     calories_consumed: 369,
+    calories_burned: 0,
     target_calories: 2039,
     calorie_balance: -1670,
     proteins_consumed: 15,
@@ -26,8 +27,8 @@ describe('DailyInsightCard', () => {
     render(<DailyInsightCard dailySummary={summary} date="2025-09-13" />);
 
     expect(screen.getByText(/Bilan Quotidien/)).toBeInTheDocument();
-    expect(screen.getByText(/Balance Calorique: -1670 kcal/)).toBeInTheDocument();
-    expect(screen.getByText(/Déficit calorique/)).toBeInTheDocument();
+    expect(screen.getByText(/Solde Énergétique: \+369 kcal/)).toBeInTheDocument();
+    expect(screen.getByText(/Surplus calorique/)).toBeInTheDocument();
   });
 
   it('displays goal feedback when available', () => {
@@ -142,7 +143,8 @@ describe('DailyInsightCard', () => {
 
   it('shows correct balance status for deficit', () => {
     const summary = createMockSummary({
-      calorie_balance: -500
+      calories_consumed: 1500,
+      calories_burned: 2000 // Solde = 1500 - 2000 = -500
     });
 
     render(<DailyInsightCard dailySummary={summary} date="2025-09-13" />);
@@ -152,7 +154,8 @@ describe('DailyInsightCard', () => {
 
   it('shows correct balance status for surplus', () => {
     const summary = createMockSummary({
-      calorie_balance: 500
+      calories_consumed: 2500,
+      calories_burned: 2000 // Solde = 2500 - 2000 = +500
     });
 
     render(<DailyInsightCard dailySummary={summary} date="2025-09-13" />);
@@ -162,7 +165,8 @@ describe('DailyInsightCard', () => {
 
   it('shows correct balance status for balanced', () => {
     const summary = createMockSummary({
-      calorie_balance: 50 // within -100 to +100 range
+      calories_consumed: 2050,
+      calories_burned: 2000 // Solde = 2050 - 2000 = +50 (dans la plage -100 à +100)
     });
 
     render(<DailyInsightCard dailySummary={summary} date="2025-09-13" />);
@@ -173,16 +177,16 @@ describe('DailyInsightCard', () => {
   it('handles missing consumed values gracefully', () => {
     const summary = createMockSummary({
       calories_consumed: undefined,
+      calories_burned: undefined,
       proteins_consumed: undefined,
       carbs_consumed: undefined,
       fats_consumed: undefined,
-      calorie_balance: -1670, // Use a known balance for this test
     });
 
     render(<DailyInsightCard dailySummary={summary} date="2025-09-13" />);
 
-    // Should not crash and should show the balance from the summary
-    expect(screen.getByText(/Balance Calorique: -1670 kcal/)).toBeInTheDocument();
+    // Should not crash and should show 0 balance when both consumed and burned are missing
+    expect(screen.getByText(/Solde Énergétique: 0 kcal/)).toBeInTheDocument();
   });
 
   it('formats date correctly', () => {
@@ -233,21 +237,76 @@ describe('DailyInsightCard', () => {
 
   it('handles positive calorie balance display', () => {
     const summary = createMockSummary({
-      calorie_balance: 500
+      calories_consumed: 2500,
+      calories_burned: 2000 // Solde = 2500 - 2000 = +500
     });
 
     render(<DailyInsightCard dailySummary={summary} date="2025-09-13" />);
 
-    expect(screen.getByText(/Balance Calorique: \+500 kcal/)).toBeInTheDocument();
+    expect(screen.getByText(/Solde Énergétique: \+500 kcal/)).toBeInTheDocument();
   });
 
   it('rounds calorie balance for display', () => {
     const summary = createMockSummary({
-      calorie_balance: -1670.7
+      calories_consumed: 2000.3,
+      calories_burned: 3671 // Solde = 2000.3 - 3671 = -1670.7 arrondi à -1671
     });
 
     render(<DailyInsightCard dailySummary={summary} date="2025-09-13" />);
 
-    expect(screen.getByText(/Balance Calorique: -1671 kcal/)).toBeInTheDocument();
+    expect(screen.getByText(/Solde Énergétique: -1671 kcal/)).toBeInTheDocument();
+  });
+
+  it('calculates and displays needs deficit correctly', () => {
+    const summary = createMockSummary({
+      calories_consumed: 230,
+      calories_burned: 367.5,
+      tdee: 2039
+    });
+
+    render(<DailyInsightCard dailySummary={summary} date="2025-09-13" />);
+
+    // Calcul: Solde = 230 - 367.5 = -137.5
+    // Écart vs besoins = -137.5 - (2039 - 367.5) = -137.5 - 1671.5 = -1809
+    expect(screen.getByText(/Écart vs besoins: -1809 kcal/)).toBeInTheDocument();
+  });
+
+  it('hides needs deficit when TDEE is not available', () => {
+    const summary = createMockSummary({
+      calories_consumed: 230,
+      calories_burned: 367.5,
+      tdee: undefined
+    });
+
+    render(<DailyInsightCard dailySummary={summary} date="2025-09-13" />);
+
+    expect(screen.queryByText(/Écart vs besoins/)).not.toBeInTheDocument();
+  });
+
+  it('displays appropriate status message for significant deficit', () => {
+    const summary = createMockSummary({
+      calories_consumed: 500,
+      calories_burned: 0,
+      tdee: 2000
+    });
+
+    render(<DailyInsightCard dailySummary={summary} date="2025-09-13" />);
+
+    // Déficit important = Solde(500) - (TDEE(2000) - calories_burned(0)) = 500 - 2000 = -1500
+    expect(screen.getByText(/Déficit important - Alimentation supplémentaire nécessaire/)).toBeInTheDocument();
+  });
+
+  it('displays tooltips for energy metrics', () => {
+    const summary = createMockSummary({
+      calories_consumed: 1500,
+      calories_burned: 300,
+      tdee: 2200
+    });
+
+    render(<DailyInsightCard dailySummary={summary} date="2025-09-13" />);
+
+    // Vérifier que les icônes Info sont présentes (tooltips triggers)
+    const infoIcons = screen.getAllByTestId('info-icon');
+    expect(infoIcons).toHaveLength(2); // Une pour chaque métrique
   });
 });
