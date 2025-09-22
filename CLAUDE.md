@@ -123,6 +123,7 @@ Avant toute PR/merge :
 3. **Valider avec validation gates**
 4. **Update documentation** si nécessaire
 5. **PR avec review**
+6. **Ne JAMAIS indiquer 🤖 Generated with [Claude Code](https://claude.ai/code) dans les commits ou Co-Authored-By: Claude <noreply@anthropic.com>**
 
 ### 📝 Standards de Documentation
 - **API changes** : Mettre à jour ce CLAUDE.md

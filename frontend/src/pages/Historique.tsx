@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
 import { DailyInsightCard } from "@/components/DailyInsightCard";
+import { TemporalNavigator } from "@/components/TemporalNavigator";
 import {
   fetchMeals,
   fetchActivities,
@@ -56,33 +57,25 @@ const Historique = () => {
         </header>
         <main className="flex-1 space-y-6 p-6 pb-24 md:pb-6">
           <div className="flex items-center justify-center md:justify-start">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-[260px] justify-start text-left font-normal"
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {format(date, "PPP")}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={(d) => d && setDate(d)}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <TemporalNavigator
+              selectedDate={date}
+              onDateChange={setDate}
+            />
           </div>
 
           {summary && (
-            <DailyInsightCard
-              dailySummary={summary}
-              date={dateStr}
-              className="shadow-soft"
-            />
+            summary.calories_consumed > 0 || meals?.length > 0 || activities?.length > 0 ? (
+              <DailyInsightCard
+                dailySummary={summary}
+                date={dateStr}
+                className="shadow-soft"
+              />
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>Aucune donnée nutritionnelle disponible pour cette date.</p>
+                <p className="text-sm mt-2">Ajoutez des repas ou des activités pour voir le bilan quotidien.</p>
+              </div>
+            )
           )}
 
           <Tabs defaultValue="meals" className="w-full">
