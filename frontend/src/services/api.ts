@@ -379,3 +379,70 @@ export async function fetchProductDetails(barcode: string): Promise<ProductDetai
   }
   return (await res.json()) as ProductDetails;
 }
+
+// Types pour les recommandations nutritionnelles
+export interface WeeklyNutritionAnalysis {
+  user_id: string;
+  analysis_period: [string, string];
+  days_with_data: number;
+  avg_calories: number;
+  avg_protein: number;
+  avg_carbs: number;
+  avg_fat: number;
+  avg_fiber: number;
+  avg_sodium: number;
+  avg_sugar: number;
+  deficiencies: string[];
+  excesses: string[];
+  overall_score: number;
+  confidence_level: "high" | "medium" | "low";
+}
+
+export interface FoodSuggestion {
+  name: string;
+  nutrient_value: number;
+  nutrient_unit: string;
+  portion: string;
+  portion_size: number;
+  source: "nutritionix" | "openfoodfacts" | "static";
+  calories_per_portion?: number;
+  additional_nutrients: Record<string, number>;
+}
+
+export interface NutritionRecommendation {
+  id: string;
+  category: string;
+  priority: number;
+  message: string;
+  explanation: string;
+  food_suggestions: FoodSuggestion[];
+  target_value?: number;
+  current_value?: number;
+  unit?: string;
+}
+
+export interface NutritionRecommendationsResponse {
+  user_id: string;
+  analysis: WeeklyNutritionAnalysis;
+  recommendations: NutritionRecommendation[];
+  generated_at: string;
+  disclaimer: string;
+}
+
+export async function fetchNutritionRecommendations(
+  userId: string = "00000000-0000-0000-0000-000000000000",
+  days: number = 7
+): Promise<NutritionRecommendationsResponse> {
+  const res = await fetch(
+    `http://localhost:8000/api/nutrition-recommendations?user_id=${userId}&days=${days}`
+  );
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(
+      errorData.detail || `Erreur API ${res.status}: ${res.statusText}`
+    );
+  }
+
+  return (await res.json()) as NutritionRecommendationsResponse;
+}

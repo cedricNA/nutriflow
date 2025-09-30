@@ -19,7 +19,7 @@ def test_update_daily_summary_dynamic(monkeypatch):
             return self
 
         def update(self, record):
-            # Trouve et met à jour l'enregistrement existant  
+            # Trouve et met à jour l'enregistrement existant
             for i, rec in enumerate(self.store):
                 if all(rec.get(k) == v for k, v in self.filters.items()):
                     self.store[i] = {**rec, **record}

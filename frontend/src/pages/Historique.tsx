@@ -19,6 +19,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
 import { DailyInsightCard } from "@/components/DailyInsightCard";
 import { TemporalNavigator } from "@/components/TemporalNavigator";
+import { NutritionRecommendations } from "@/components/NutritionRecommendations";
 import {
   fetchMeals,
   fetchActivities,
@@ -65,11 +66,18 @@ const Historique = () => {
 
           {summary && (
             summary.calories_consumed > 0 || meals?.length > 0 || activities?.length > 0 ? (
-              <DailyInsightCard
-                dailySummary={summary}
-                date={dateStr}
-                className="shadow-soft"
-              />
+              <>
+                <DailyInsightCard
+                  dailySummary={summary}
+                  date={dateStr}
+                  className="shadow-soft"
+                />
+
+                <NutritionRecommendations
+                  userId="00000000-0000-0000-0000-000000000000"
+                  className="shadow-soft"
+                />
+              </>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <p>Aucune donnée nutritionnelle disponible pour cette date.</p>

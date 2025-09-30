@@ -38,7 +38,11 @@ def test_daily_summary_meal_activity(monkeypatch):
         def execute(self):
             if self.filters:
                 # Retour filtré pour select
-                data = [r for r in self.store if all(r.get(k) == v for k, v in self.filters.items())]
+                data = [
+                    r
+                    for r in self.store
+                    if all(r.get(k) == v for k, v in self.filters.items())
+                ]
                 return types.SimpleNamespace(data=data)
             else:
                 # Retour complet pour insert/update

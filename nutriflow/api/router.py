@@ -293,27 +293,44 @@ class DailyNutritionSummary(BaseModel):
     Réponse API pour les résumés quotidiens nutritionnels
     IMPORTANT: Doit matcher exactement DailySummary TypeScript et la table daily_summary
     """
+
     # === Colonnes de consommation (données réelles) ===
-    calories_consumed: float = Field(default=0, description="Calories consommées via repas (kcal)")
-    proteins_consumed: float = Field(default=0, description="Protéines consommées (g)")  
+    calories_consumed: float = Field(
+        default=0, description="Calories consommées via repas (kcal)"
+    )
+    proteins_consumed: float = Field(default=0, description="Protéines consommées (g)")
     carbs_consumed: float = Field(default=0, description="Glucides consommés (g)")
     fats_consumed: float = Field(default=0, description="Lipides consommés (g)")
-    
+
     # === Colonnes d'objectifs (calculés) ===
-    calories_goal: float = Field(default=0, description="Objectif calorique quotidien (kcal)")
+    calories_goal: float = Field(
+        default=0, description="Objectif calorique quotidien (kcal)"
+    )
     proteins_goal: float = Field(default=0, description="Objectif protéines (g)")
-    carbs_goal: float = Field(default=0, description="Objectif glucides (g)")  
+    carbs_goal: float = Field(default=0, description="Objectif glucides (g)")
     fats_goal: float = Field(default=0, description="Objectif lipides (g)")
-    
+
     # === Colonnes optionnelles étendues ===
-    calories_burned: Optional[float] = Field(default=None, description="Calories brûlées via exercices (kcal)")
+    calories_burned: Optional[float] = Field(
+        default=None, description="Calories brûlées via exercices (kcal)"
+    )
     bmr: Optional[float] = Field(default=None, description="Métabolisme de base (kcal)")
     tdee: Optional[float] = Field(default=None, description="TDEE total (kcal)")
-    calorie_balance: Optional[float] = Field(default=None, description="Balance calorique nette")
-    calories_total: Optional[float] = Field(default=None, description="calories_consumed + calories_burned")
-    sport_total: Optional[float] = Field(default=None, description="Durée totale exercices (minutes)")
-    goal_feedback: Optional[str] = Field(default=None, description="Message de conseil personnalisé")
-    has_data: Optional[bool] = Field(default=None, description="Indicateur de présence de données")
+    calorie_balance: Optional[float] = Field(
+        default=None, description="Balance calorique nette"
+    )
+    calories_total: Optional[float] = Field(
+        default=None, description="calories_consumed + calories_burned"
+    )
+    sport_total: Optional[float] = Field(
+        default=None, description="Durée totale exercices (minutes)"
+    )
+    goal_feedback: Optional[str] = Field(
+        default=None, description="Message de conseil personnalisé"
+    )
+    has_data: Optional[bool] = Field(
+        default=None, description="Indicateur de présence de données"
+    )
 
 
 class GoalRatios(BaseModel):
@@ -611,7 +628,7 @@ def get_goals():
     return GoalsResponse(**goals, tdee=tdee, objectif=objectif)
 
 
-@router.get("/daily-summary")
+@router.get("/daily-summary", response_model=DailyNutritionSummary)
 def daily_summary(
     date_str: str = Query(default=None, description="Date au format YYYY-MM-DD"),
 ):
@@ -627,16 +644,20 @@ def daily_summary(
 
     user = db.get_user(user_id)
     if not user:
-        return {
-            "calories_consumed": calories_cons,
-            "proteins_consumed": prot_cons,
-            "carbs_consumed": carb_cons,
-            "fats_consumed": fat_cons,
-        }
-
+        return DailyNutritionSummary(
+            calories_consumed=calories_cons,
+            proteins_consumed=prot_cons,
+            carbs_consumed=carb_cons,
+            fats_consumed=fat_cons,
+            calories_goal=1800,  # Default pour les tests
+            proteins_goal=0,
+            carbs_goal=0,
+            fats_goal=0,
+        )
     # Calculer BMR et TDEE
     try:
         from nutriflow.services import calculer_bmr
+
         bmr = calculer_bmr(
             user["poids_kg"],
             user["taille_cm"],
@@ -661,8 +682,16 @@ def daily_summary(
     # Récupérer les données d'activités pour calories_burned
     try:
         supabase = db.get_supabase_client()
-        activities = supabase.table("activities").select("calories_brulees").eq("user_id", user_id).eq("date", d).execute()
-        calories_burned = sum(a.get("calories_brulees", 0) for a in (activities.data or []))
+        activities = (
+            supabase.table("activities")
+            .select("calories_brulees")
+            .eq("user_id", user_id)
+            .eq("date", d)
+            .execute()
+        )
+        calories_burned = sum(
+            a.get("calories_brulees", 0) for a in (activities.data or [])
+        )
     except Exception:
         calories_burned = 0
 
@@ -695,23 +724,25 @@ def daily_summary(
             elif calorie_balance > 100:
                 goal_feedback = "Léger surplus - surveillez votre poids"
             else:
-                goal_feedback = "Léger déficit - surveillez votre énergie et hydratation"
+                goal_feedback = (
+                    "Léger déficit - surveillez votre énergie et hydratation"
+                )
 
-    return {
-        "calories_consumed": calories_cons,
-        "proteins_consumed": prot_cons,
-        "carbs_consumed": carb_cons,
-        "fats_consumed": fat_cons,
-        "calories_burned": calories_burned,
-        "bmr": bmr,
-        "tdee": tdee_val,
-        "calorie_balance": calorie_balance,
-        "goal_feedback": goal_feedback,
-        "target_calories": cal_goal,
-        "target_proteins_g": macros_goal.get("proteins") if macros_goal else None,
-        "target_carbs_g": macros_goal.get("carbs") if macros_goal else None,
-        "target_fats_g": macros_goal.get("fats") if macros_goal else None,
-    }
+    return DailyNutritionSummary(
+        calories_consumed=calories_cons,
+        proteins_consumed=prot_cons,
+        carbs_consumed=carb_cons,
+        fats_consumed=fat_cons,
+        calories_goal=cal_goal or 1800,
+        proteins_goal=macros_goal.get("proteins", 0) if macros_goal else 0,
+        carbs_goal=macros_goal.get("carbs", 0) if macros_goal else 0,
+        fats_goal=macros_goal.get("fats", 0) if macros_goal else 0,
+        calories_burned=calories_burned,
+        bmr=bmr,
+        tdee=tdee_val,
+        calorie_balance=calorie_balance,
+        goal_feedback=goal_feedback,
+    )
 
 
 @router.post("/daily-summary/update")
@@ -1026,3 +1057,44 @@ def remove_activity(activity_id: str):
         raise HTTPException(status_code=404, detail="Activity not found")
     db.delete_activity(activity_id)
     return {"detail": "Activity deleted"}
+
+
+@router.get("/nutrition-recommendations")
+async def get_nutrition_recommendations(
+    user_id: str = Query(default=TEST_USER_ID, description="Identifiant utilisateur"),
+    days: int = Query(default=7, ge=1, le=30, description="Nombre de jours à analyser"),
+):
+    """
+    Génère des recommandations nutritionnelles personnalisées basées sur l'historique alimentaire.
+
+    Analyse les patterns nutritionnels sur les derniers jours et propose des suggestions
+    d'amélioration avec des aliments concrets.
+
+    Args:
+        user_id: Identifiant de l'utilisateur (défaut: utilisateur test)
+        days: Nombre de jours d'historique à analyser (1-30, défaut: 7)
+
+    Returns:
+        NutritionRecommendationsResponse: Analyse nutritionnelle + recommandations + suggestions alimentaires
+
+    Raises:
+        HTTPException: Si erreur lors de l'analyse ou génération des recommandations
+    """
+    try:
+        from backend.services.nutrition_recommendations import (
+            NutritionRecommendationsService,
+        )
+
+        # Initialisation du service de recommandations
+        recommendations_service = NutritionRecommendationsService()
+
+        # Génération des recommandations complètes
+        result = await recommendations_service.get_recommendations(user_id, days)
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur lors de la génération des recommandations: {str(e)}",
+        )
