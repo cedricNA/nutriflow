@@ -8,6 +8,8 @@ from typing import List
 import uuid
 from statistics import mean
 
+from backend.services.nutrition_constants import NUTRITION_TARGETS
+
 from nutriflow.models.recommendations import (
     WeeklyNutritionAnalysis,
     NutritionRecommendation,
@@ -88,7 +90,11 @@ class NutritionAnalyzer:
 
         # Calcul de l'objectif calorique personnalisé
         # Priorité : target_calories > tdee > fallback sécurisé (1200)
-        target_calories_values = [s.get("target_calories") for s in valid_summaries if s.get("target_calories")]
+        target_calories_values = [
+            s.get("target_calories")
+            for s in valid_summaries
+            if s.get("target_calories")
+        ]
         tdee_values = [s.get("tdee") for s in valid_summaries if s.get("tdee")]
 
         if target_calories_values:
@@ -534,14 +540,22 @@ class NutritionRecommendationsService:
         )
 
         summaries = summaries_response.data or []
-        valid_summaries = [s for s in summaries if s.get("target_calories") or s.get("tdee")]
+        valid_summaries = [
+            s for s in summaries if s.get("target_calories") or s.get("tdee")
+        ]
 
         if valid_summaries:
-            target_calories_values = [s.get("target_calories") for s in valid_summaries if s.get("target_calories")]
+            target_calories_values = [
+                s.get("target_calories")
+                for s in valid_summaries
+                if s.get("target_calories")
+            ]
             tdee_values = [s.get("tdee") for s in valid_summaries if s.get("tdee")]
 
             if target_calories_values:
-                target_calories = sum(target_calories_values) / len(target_calories_values)
+                target_calories = sum(target_calories_values) / len(
+                    target_calories_values
+                )
             elif tdee_values:
                 target_calories = sum(tdee_values) / len(tdee_values)
             else:
