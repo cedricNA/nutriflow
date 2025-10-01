@@ -285,6 +285,12 @@ export interface DailySummary {
   num_meals?: number;
   num_activities?: number;
   has_data?: boolean;
+  // API returns *_goal fields, not target_*
+  calories_goal?: number;
+  proteins_goal?: number;
+  carbs_goal?: number;
+  fats_goal?: number;
+  // Legacy field names (keep for backward compatibility)
   target_calories?: number;
   target_proteins_g?: number;
   target_carbs_g?: number;
@@ -292,7 +298,7 @@ export interface DailySummary {
 }
 
 export async function fetchDailySummary(date: string): Promise<DailySummary> {
-  const res = await fetch(`http://localhost:8000/api/daily-summary?date=${date}`);
+  const res = await fetch(`http://localhost:8000/api/daily-summary?date_str=${date}`);
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Erreur API ${res.status}: ${text}`);
