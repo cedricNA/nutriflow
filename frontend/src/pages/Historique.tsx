@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
 import { DailyInsightCard } from "@/components/DailyInsightCard";
-import { TemporalNavigator } from "@/components/TemporalNavigator";
+import { CalendarNavigator } from "@/components/CalendarNavigator";
 import { NutritionRecommendations } from "@/components/NutritionRecommendations";
 import {
   fetchMeals,
@@ -58,7 +58,7 @@ const Historique = () => {
         </header>
         <main className="flex-1 space-y-6 p-6 pb-24 md:pb-6">
           <div className="flex items-center justify-center md:justify-start">
-            <TemporalNavigator
+            <CalendarNavigator
               selectedDate={date}
               onDateChange={setDate}
             />
